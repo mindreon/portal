@@ -1,0 +1,68 @@
+# 一键部署：
+#   1. cp .env.example .env
+#   2. docker compose up -d --build
+#   3. 浏览器打开 http://localhost
+#
+# 四个容器：
+#   db    — PostgreSQL，存用户 / 合同 / 发票
+#   api   — Python FastAPI
+#   web   — Next.js 前端
+#   proxy — Caddy 反向代理，把 / 和 /api 合成同一个网站
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: portal
+      POSTGRES_PASSWORD: portal
+      POSTGRES_DB: portal
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U portal -d portal"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./apps/api
+    env_file:
+      - .env
+    environment:
+      # 容器之间用服务名通信，不要用 localhost
+      DATABASE_URL: postgresql+psycopg://portal:portal@db:5432/portal
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    expose:
+      - "8000"
+
+  web:
+    build:
+      context: ./apps/web
+      args:
+        API_INTERNAL_URL: http://api:8000
+    environment:
+      API_INTERNAL_URL: http://api:8000
+    depends_on:
+      - api
+    restart: unless-stopped
+    expose:
+      - "3000"
+
+  proxy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - web
+      - api
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

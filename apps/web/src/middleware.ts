@@ -1,0 +1,21 @@
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+
+const COOKIE_NAME = "portal_session";
+
+export function middleware(request: NextRequest) {
+  const token = request.cookies.get(COOKIE_NAME)?.value;
+  const isLogin = request.nextUrl.pathname.startsWith("/login");
+
+  if (!token && !isLogin) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+  if (token && isLogin) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+};

@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+:root {
+  --ink: #1b2430;
+  --paper: #f3efe6;
+  --card: #fffdf8;
+  --line: #d9d1c4;
+  --accent: #b45309;
+  --accent-dark: #8a3d07;
+  --navy: #16324f;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  color: var(--ink);
+  background: var(--paper);
+  font-family:
+    "Iowan Old Style",
+    "Palatino Linotype",
+    Palatino,
+    "Songti SC",
+    "Source Han Serif SC",
+    serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
