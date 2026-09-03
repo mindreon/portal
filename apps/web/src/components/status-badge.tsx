@@ -1,13 +1,13 @@
 import { CONTRACT_STATUS_LABEL, INVOICE_STATUS_LABEL } from "@/lib/types";
 
 const TONES: Record<string, string> = {
-  draft: "bg-[#efe6d6] text-[#6b4f2a]",
-  active: "bg-[#dcecdf] text-[#215c38]",
-  issued: "bg-[#dcecdf] text-[#215c38]",
-  paid: "bg-[#d7e6f4] text-[#1d4f74]",
-  expired: "bg-[#f3e2c7] text-[#8a4b12]",
-  terminated: "bg-[#eadfdf] text-[#7a3030]",
-  void: "bg-[#eadfdf] text-[#7a3030]",
+  draft: "bg-white/10 text-[var(--muted)]",
+  active: "bg-[var(--mint)]/15 text-[var(--mint)]",
+  issued: "bg-[var(--indigo)]/20 text-[#c4b8ff]",
+  paid: "bg-[var(--mint)]/15 text-[var(--mint)]",
+  expired: "bg-amber-400/15 text-amber-200",
+  terminated: "bg-[var(--danger)]/12 text-[var(--danger)]",
+  void: "bg-[var(--danger)]/12 text-[var(--danger)]",
 };
 
 export function StatusBadge({
@@ -19,7 +19,7 @@ export function StatusBadge({
 }) {
   const label = (kind === "contract" ? CONTRACT_STATUS_LABEL : INVOICE_STATUS_LABEL)[value] ?? value;
   return (
-    <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs ${TONES[value] ?? "bg-stone-200"}`}>
+    <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${TONES[value] ?? "bg-white/10"}`}>
       {label}
     </span>
   );

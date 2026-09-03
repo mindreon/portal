@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
+import { Field, FormError, PageHeader } from "@/components/ui";
 import { api } from "@/lib/api";
 import { INVOICE_STATUS_LABEL, type Contract, type Invoice } from "@/lib/types";
 
@@ -88,29 +89,29 @@ export function InvoiceEditor({ invoiceId }: { invoiceId?: number }) {
 
   return (
     <AppShell>
-      <h2 className="mb-6 text-3xl font-semibold">{invoiceId ? "编辑发票" : "新建发票"}</h2>
-      <form onSubmit={onSubmit} className="max-w-2xl space-y-4 rounded-xl border border-[var(--line)] bg-[var(--card)] p-6">
-        {error ? <p className="rounded-md bg-[#f8e8e4] px-3 py-2 text-sm text-[#8a3030]">{error}</p> : null}
+      <PageHeader eyebrow="Invoices" title={invoiceId ? "编辑发票" : "新建发票"} />
+      <form onSubmit={onSubmit} className="ui-card max-w-2xl space-y-4 rounded-3xl p-6">
+        <FormError message={error} />
         <Field label="发票名称">
-          <input required value={form.title} onChange={(e) => update("title", e.target.value)} className={inputClass} />
+          <input required value={form.title} onChange={(e) => update("title", e.target.value)} className="ui-input" />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="发票编号">
-            <input required value={form.invoice_no} onChange={(e) => update("invoice_no", e.target.value)} className={inputClass} />
+            <input required value={form.invoice_no} onChange={(e) => update("invoice_no", e.target.value)} className="ui-input font-mono-num" />
           </Field>
           <Field label="对方名称">
-            <input required value={form.counterparty} onChange={(e) => update("counterparty", e.target.value)} className={inputClass} />
+            <input required value={form.counterparty} onChange={(e) => update("counterparty", e.target.value)} className="ui-input" />
           </Field>
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="金额">
-            <input required type="number" step="0.01" min="0" value={form.amount} onChange={(e) => update("amount", e.target.value)} className={inputClass} />
+            <input required type="number" step="0.01" min="0" value={form.amount} onChange={(e) => update("amount", e.target.value)} className="ui-input font-mono-num" />
           </Field>
           <Field label="税额">
-            <input required type="number" step="0.01" min="0" value={form.tax_amount} onChange={(e) => update("tax_amount", e.target.value)} className={inputClass} />
+            <input required type="number" step="0.01" min="0" value={form.tax_amount} onChange={(e) => update("tax_amount", e.target.value)} className="ui-input font-mono-num" />
           </Field>
           <Field label="状态">
-            <select value={form.status} onChange={(e) => update("status", e.target.value)} className={inputClass}>
+            <select value={form.status} onChange={(e) => update("status", e.target.value)} className="ui-input">
               {Object.entries(INVOICE_STATUS_LABEL).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
@@ -121,14 +122,14 @@ export function InvoiceEditor({ invoiceId }: { invoiceId?: number }) {
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="开票日期">
-            <input type="date" value={form.issued_at} onChange={(e) => update("issued_at", e.target.value)} className={inputClass} />
+            <input type="date" value={form.issued_at} onChange={(e) => update("issued_at", e.target.value)} className="ui-input" />
           </Field>
           <Field label="到期日期">
-            <input type="date" value={form.due_at} onChange={(e) => update("due_at", e.target.value)} className={inputClass} />
+            <input type="date" value={form.due_at} onChange={(e) => update("due_at", e.target.value)} className="ui-input" />
           </Field>
         </div>
         <Field label="关联合同（可选）">
-          <select value={form.contract_id} onChange={(e) => update("contract_id", e.target.value)} className={inputClass}>
+          <select value={form.contract_id} onChange={(e) => update("contract_id", e.target.value)} className="ui-input">
             <option value="">不关联</option>
             {contracts.map((item) => (
               <option key={item.id} value={item.id}>
@@ -138,14 +139,14 @@ export function InvoiceEditor({ invoiceId }: { invoiceId?: number }) {
           </select>
         </Field>
         <Field label="备注">
-          <textarea value={form.notes} onChange={(e) => update("notes", e.target.value)} rows={4} className={inputClass} />
+          <textarea value={form.notes} onChange={(e) => update("notes", e.target.value)} rows={4} className="ui-input" />
         </Field>
         <div className="flex items-center gap-3 pt-2">
-          <button type="submit" disabled={busy} className="rounded-lg bg-[var(--accent)] px-4 py-2 text-white hover:bg-[var(--accent-dark)] disabled:opacity-60">
+          <button type="submit" disabled={busy} className="ui-btn ui-btn-indigo">
             保存
           </button>
           {invoiceId ? (
-            <button type="button" onClick={onDelete} className="text-sm text-[#8a3030] hover:underline">
+            <button type="button" onClick={onDelete} className="text-sm text-[var(--danger)] hover:underline">
               删除
             </button>
           ) : null}
@@ -154,14 +155,3 @@ export function InvoiceEditor({ invoiceId }: { invoiceId?: number }) {
     </AppShell>
   );
 }
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block text-sm">
-      <span className="mb-1 block text-[#5c4c38]">{label}</span>
-      {children}
-    </label>
-  );
-}
-
-const inputClass = "w-full rounded-md border border-[var(--line)] bg-white px-3 py-2";

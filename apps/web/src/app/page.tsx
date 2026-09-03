@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
+import { PageHeader, TextLink } from "@/components/ui";
 import { api, money } from "@/lib/api";
 import type { Contract, Invoice } from "@/lib/types";
 
@@ -25,21 +26,19 @@ export default function HomePage() {
 
   return (
     <AppShell>
-      <header className="mb-8">
-        <p className="text-sm text-[#7a6a55]">今天要处理的事，都放在这一页。</p>
-        <h2 className="mt-1 text-3xl font-semibold">工作台</h2>
-      </header>
+      <PageHeader eyebrow="Dashboard" title="今日节奏" />
 
       <section className="grid gap-4 sm:grid-cols-3">
-        <StatCard title="合同总数" value={String(contracts.length)} href="/contracts" />
-        <StatCard title="履约中" value={String(activeContracts)} href="/contracts" />
-        <StatCard title="待收款发票" value={String(unpaidInvoices)} href="/invoices" />
+        <StatCard title="合同总数" value={String(contracts.length)} href="/contracts" tone="mint" />
+        <StatCard title="履约中" value={String(activeContracts)} href="/contracts" tone="mint" />
+        <StatCard title="待收款发票" value={String(unpaidInvoices)} href="/invoices" tone="indigo" />
       </section>
 
-      <section className="mt-10 grid gap-8 lg:grid-cols-2">
+      <section className="mt-10 grid gap-6 lg:grid-cols-2">
         <RecentList
-          title="最近合同"
+          title="合同模块"
           href="/contracts"
+          empty="合同还是空的，去合同页建第一条。"
           rows={contracts.slice(0, 5).map((item) => ({
             id: item.id,
             title: item.title,
@@ -48,8 +47,9 @@ export default function HomePage() {
           }))}
         />
         <RecentList
-          title="最近发票"
+          title="发票模块"
           href="/invoices"
+          empty="发票还是空的，去发票页建第一条。"
           rows={invoices.slice(0, 5).map((item) => ({
             id: item.id,
             title: item.title,
@@ -62,11 +62,22 @@ export default function HomePage() {
   );
 }
 
-function StatCard({ title, value, href }: { title: string; value: string; href: string }) {
+function StatCard({
+  title,
+  value,
+  href,
+  tone,
+}: {
+  title: string;
+  value: string;
+  href: string;
+  tone: "mint" | "indigo";
+}) {
+  const glow = tone === "mint" ? "hover:shadow-[0_0_28px_var(--glow-mint)]" : "hover:shadow-[0_0_28px_var(--glow-indigo)]";
   return (
-    <Link href={href} className="rounded-xl border border-[var(--line)] bg-[var(--card)] p-5 shadow-sm">
-      <p className="text-sm text-[#7a6a55]">{title}</p>
-      <p className="mt-2 text-3xl font-semibold">{value}</p>
+    <Link href={href} className={`ui-card rounded-3xl p-5 transition ${glow}`}>
+      <p className="text-sm text-[var(--muted)]">{title}</p>
+      <p className="font-mono-num mt-3 text-4xl font-semibold">{value}</p>
     </Link>
   );
 }
@@ -74,29 +85,29 @@ function StatCard({ title, value, href }: { title: string; value: string; href: 
 function RecentList({
   title,
   href,
+  empty,
   rows,
 }: {
   title: string;
   href: string;
+  empty: string;
   rows: { id: number; title: string; meta: string; href: string }[];
 }) {
   return (
-    <div className="rounded-xl border border-[var(--line)] bg-[var(--card)] p-5">
+    <div className="ui-card rounded-3xl p-5">
       <div className="mb-4 flex items-end justify-between">
-        <h3 className="text-xl font-semibold">{title}</h3>
-        <Link href={href} className="text-sm text-[var(--accent)] hover:underline">
-          查看全部
-        </Link>
+        <h3 className="text-lg font-semibold">{title}</h3>
+        <TextLink href={href}>查看全部</TextLink>
       </div>
       {rows.length === 0 ? (
-        <p className="text-sm text-[#7a6a55]">还没有数据。先新建一条试试看。</p>
+        <p className="text-sm text-[var(--muted)]">{empty}</p>
       ) : (
-        <ul className="space-y-3">
+        <ul className="space-y-2">
           {rows.map((row) => (
             <li key={row.id}>
-              <Link href={row.href} className="block rounded-md px-1 py-1 hover:bg-[#f6f0e6]">
+              <Link href={row.href} className="block rounded-2xl px-2 py-2 hover:bg-white/5">
                 <p className="font-medium">{row.title}</p>
-                <p className="text-sm text-[#7a6a55]">{row.meta}</p>
+                <p className="font-mono-num text-sm text-[var(--muted)]">{row.meta}</p>
               </Link>
             </li>
           ))}

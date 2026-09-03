@@ -1,13 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --ink: #1b2430;
-  --paper: #f3efe6;
-  --card: #fffdf8;
-  --line: #d9d1c4;
-  --accent: #b45309;
-  --accent-dark: #8a3d07;
-  --navy: #16324f;
+  --bg: #07080d;
+  --bg-elevated: #10131c;
+  --card: rgba(16, 19, 28, 0.86);
+  --line: rgba(180, 196, 220, 0.12);
+  --text: #f4f7fb;
+  --muted: #8b95a8;
+  --mint: #3dffc8;
+  --mint-dim: #1fb892;
+  --indigo: #7c6cff;
+  --indigo-deep: #5b4ee0;
+  --danger: #ff7b93;
+  --glow-mint: rgba(61, 255, 200, 0.28);
+  --glow-indigo: rgba(124, 108, 255, 0.28);
 }
 
 html,
@@ -16,15 +22,24 @@ body {
 }
 
 body {
-  color: var(--ink);
-  background: var(--paper);
-  font-family:
-    "Iowan Old Style",
-    "Palatino Linotype",
-    Palatino,
-    "Songti SC",
-    "Source Han Serif SC",
-    serif;
+  color: var(--text);
+  background:
+    radial-gradient(900px 480px at 8% -10%, rgba(124, 108, 255, 0.18), transparent 55%),
+    radial-gradient(720px 420px at 100% 0%, rgba(61, 255, 200, 0.12), transparent 50%),
+    var(--bg);
+  font-family: var(--font-sans), "PingFang SC", "Noto Sans SC", sans-serif;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(circle at 30% 20%, black, transparent 75%);
 }
 
 button,
@@ -32,4 +47,82 @@ input,
 select,
 textarea {
   font: inherit;
+  color-scheme: dark;
+}
+
+a {
+  color: inherit;
+}
+
+::selection {
+  background: rgba(61, 255, 200, 0.28);
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
+.font-mono-num {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.ui-card {
+  border: 1px solid var(--line);
+  background: var(--card);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.02), 0 18px 40px rgba(0, 0, 0, 0.28);
+}
+
+.ui-input {
+  width: 100%;
+  border-radius: 0.9rem;
+  border: 1px solid var(--line);
+  background: rgba(7, 8, 13, 0.7);
+  padding: 0.65rem 0.85rem;
+  color: var(--text);
+  outline: none;
+}
+
+.ui-input:focus {
+  border-color: rgba(61, 255, 200, 0.55);
+  box-shadow: 0 0 0 3px var(--glow-mint);
+}
+
+.ui-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.65rem 1.1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: transform 120ms ease, opacity 120ms ease, box-shadow 120ms ease;
+}
+
+.ui-btn:hover {
+  transform: translateY(-1px);
+}
+
+.ui-btn:disabled {
+  opacity: 0.55;
+  transform: none;
+}
+
+.ui-btn-mint {
+  background: linear-gradient(135deg, var(--mint), #18e0b0);
+  color: #06241b;
+  box-shadow: 0 0 24px var(--glow-mint);
+}
+
+.ui-btn-indigo {
+  background: linear-gradient(135deg, var(--indigo), #4f46e5);
+  color: white;
+  box-shadow: 0 0 24px var(--glow-indigo);
+}
+
+.ui-btn-ghost {
+  border: 1px solid var(--line);
+  color: var(--text);
+  background: transparent;
 }

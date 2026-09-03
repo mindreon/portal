@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { StatusBadge } from "@/components/status-badge";
+import { EmptyHint, PageHeader } from "@/components/ui";
 import { api, money } from "@/lib/api";
 import type { Invoice } from "@/lib/types";
 
@@ -17,22 +18,22 @@ export default function InvoicesPage() {
 
   return (
     <AppShell>
-      <div className="mb-6 flex items-end justify-between">
-        <div>
-          <p className="text-sm text-[#7a6a55]">发票可以独立存在，也可以关联到一份合同。</p>
-          <h2 className="mt-1 text-3xl font-semibold">发票</h2>
-        </div>
-        <Link
-          href="/invoices/new"
-          className="rounded-lg bg-[var(--accent)] px-4 py-2 text-white hover:bg-[var(--accent-dark)]"
-        >
-          新建发票
-        </Link>
-      </div>
+      <PageHeader
+        eyebrow="Invoices"
+        title="发票"
+        action={
+          <Link href="/invoices/new" className="ui-btn ui-btn-indigo">
+            新建发票
+          </Link>
+        }
+      />
+      <p className="-mt-4 mb-6 text-sm text-[var(--muted)]">
+        这是独立模块。发票可以单独开，也可以在表单里选择关联某份合同。
+      </p>
 
-      <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--card)]">
+      <div className="ui-card overflow-hidden rounded-3xl">
         <table className="w-full text-left text-sm">
-          <thead className="bg-[#efe7d8] text-[#5c4c38]">
+          <thead className="bg-white/5 text-[var(--muted)]">
             <tr>
               <th className="px-4 py-3 font-medium">发票</th>
               <th className="px-4 py-3 font-medium">对方</th>
@@ -43,21 +44,21 @@ export default function InvoicesPage() {
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-10 text-center text-[#7a6a55]">
-                  还没有发票。点右上角新建第一条。
+                <td colSpan={4}>
+                  <EmptyHint>还没有发票。点右上角新建第一条。</EmptyHint>
                 </td>
               </tr>
             ) : (
               rows.map((row) => (
                 <tr key={row.id} className="border-t border-[var(--line)]">
                   <td className="px-4 py-3">
-                    <Link href={`/invoices/${row.id}`} className="font-medium hover:underline">
+                    <Link href={`/invoices/${row.id}`} className="font-medium hover:text-[#c4b8ff]">
                       {row.title}
                     </Link>
-                    <p className="text-xs text-[#7a6a55]">{row.invoice_no}</p>
+                    <p className="font-mono-num text-xs text-[var(--muted)]">{row.invoice_no}</p>
                   </td>
                   <td className="px-4 py-3">{row.counterparty}</td>
-                  <td className="px-4 py-3">{money(row.amount, row.currency)}</td>
+                  <td className="font-mono-num px-4 py-3">{money(row.amount, row.currency)}</td>
                   <td className="px-4 py-3">
                     <StatusBadge kind="invoice" value={row.status} />
                   </td>

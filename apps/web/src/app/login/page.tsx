@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
+import { FormError } from "@/components/ui";
 import { api } from "@/lib/api";
 import type { AuthConfig } from "@/lib/types";
 
@@ -51,49 +52,48 @@ function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-2xl border border-[var(--line)] bg-[var(--card)] p-8 shadow-sm">
-        <p className="text-xs tracking-[0.24em] uppercase text-[#8a6a3b]">公司内部</p>
-        <h1 className="mt-2 text-3xl font-semibold">登录 Portal</h1>
-        <p className="mt-2 text-sm leading-6 text-[#6f6253]">
-          正式环境用飞书企业账号进入。本地还没配飞书时，可以用开发登录先把合同和发票跑通。
+    <div className="relative flex min-h-screen items-center justify-center px-4">
+      <div className="ui-card w-full max-w-md rounded-[28px] p-8">
+        <div className="mb-6 flex items-center gap-3">
+          <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[var(--mint)] text-base font-black text-[#06241b] shadow-[0_0_24px_var(--glow-mint)]">
+            P
+          </span>
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--muted)]">AI Lab · Internal</p>
+            <h1 className="text-2xl font-semibold">欢迎回来</h1>
+          </div>
+        </div>
+        <p className="text-sm leading-6 text-[var(--muted)]">
+          正式环境用飞书进团队空间。合同和发票是两套独立模块，登录后各走各的页面。
         </p>
 
-        {error ? (
-          <p className="mt-4 rounded-md bg-[#f8e8e4] px-3 py-2 text-sm text-[#8a3030]">{error}</p>
-        ) : null}
+        <div className="mt-5">
+          <FormError message={error} />
+        </div>
 
         <div className="mt-6 space-y-4">
           {config?.feishu_enabled ? (
-            <button
-              type="button"
-              onClick={loginFeishu}
-              disabled={busy}
-              className="w-full rounded-lg bg-[#3370ff] px-4 py-3 text-white hover:bg-[#2b62e0] disabled:opacity-60"
-            >
+            <button type="button" onClick={loginFeishu} disabled={busy} className="ui-btn ui-btn-indigo w-full">
               使用飞书登录
             </button>
           ) : (
-            <p className="rounded-md bg-[#eef2f7] px-3 py-2 text-sm text-[#3d5066]">
-              还没填写 <code>FEISHU_APP_ID</code>。配好飞书应用后，这里会出现飞书登录按钮。
+            <p className="rounded-2xl bg-white/5 px-3 py-2 text-sm text-[var(--muted)]">
+              还没填写 <code className="text-[var(--mint)]">FEISHU_APP_ID</code>
+              。配好飞书后，这里会亮起登录按钮。
             </p>
           )}
 
           {config?.dev_login_enabled ? (
             <form onSubmit={loginDev} className="space-y-3 border-t border-[var(--line)] pt-4">
-              <label className="block text-sm">
+              <label className="block text-sm text-[var(--muted)]">
                 开发登录显示名
                 <input
                   value={name}
                   onChange={(event) => setName(event.target.value)}
-                  className="mt-1 w-full rounded-md border border-[var(--line)] bg-white px-3 py-2"
+                  className="ui-input mt-1.5"
                 />
               </label>
-              <button
-                type="submit"
-                disabled={busy}
-                className="w-full rounded-lg bg-[var(--navy)] px-4 py-3 text-white hover:bg-[#11263d] disabled:opacity-60"
-              >
+              <button type="submit" disabled={busy} className="ui-btn ui-btn-mint w-full">
                 开发环境登录
               </button>
             </form>
