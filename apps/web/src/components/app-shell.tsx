@@ -43,11 +43,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 className={`block rounded-[1440px] px-[22px] py-3 ${
-                  active ? "bg-deep-ink text-white" : "text-deep-ink hover:bg-canvas"
+                  active ? "bg-canvas font-semibold text-deep-ink" : "text-deep-ink hover:bg-canvas/70"
                 }`}
               >
                 <span className="block text-[16px] font-medium">{item.label}</span>
-                <span className={`block text-[10px] font-medium uppercase tracking-[-0.02em] ${active ? "text-white/70" : "text-slate"}`}>
+                <span className="block text-[10px] font-medium uppercase tracking-[-0.02em] text-slate">
                   {item.hint}
                 </span>
               </Link>
