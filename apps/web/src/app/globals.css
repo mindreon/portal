@@ -31,8 +31,12 @@
 
   --radius-md: 6px;
   --radius-lg: 10px;
+  --radius-xl: 14px;
   --radius-2xl: 18px;
   --radius-3xl: 24px;
+
+  --shadow-subtle: 0 0 0 1px rgba(23, 23, 23, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1),
+    0 1px 2px -1px rgba(0, 0, 0, 0.1);
 }
 
 :root {
@@ -167,7 +171,7 @@ textarea.ui-input {
   justify-content: center;
   height: 36px;
   border-radius: 18px;
-  padding: 0 16px;
+  padding: 0 12px;
   font-size: 14px;
   font-weight: 500;
   line-height: 1;
@@ -197,4 +201,62 @@ textarea.ui-input {
 .ui-btn-danger {
   background: transparent;
   color: var(--color-ember);
+}
+
+.search-trigger {
+  display: inline-flex;
+  min-width: min(280px, 100%);
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 36px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--color-canvas);
+  padding: 8px 10px;
+  color: var(--color-mid-gray);
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.search-trigger kbd {
+  border-radius: 10px;
+  background: var(--color-paper);
+  padding: 2px 8px;
+  font-size: 12px;
+  letter-spacing: 0.6px;
+  color: var(--color-ink);
+}
+
+.search-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  justify-content: center;
+  background: oklab(0.145 0 0 / 0.12);
+  padding: 12vh 16px 16px;
+}
+
+.search-panel {
+  width: min(560px, 100%);
+  padding: 20px;
+}
+
+.search-hit {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.search-hit:hover,
+.search-hit:focus-visible {
+  background: var(--color-canvas);
 }

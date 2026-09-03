@@ -4,7 +4,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { LogoLockup } from "@/components/logo";
+import { SearchPalette } from "@/components/search-palette";
 import { api } from "@/lib/api";
 import type { CurrentUser } from "@/lib/types";
 
@@ -61,7 +63,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
       <div>
-        <main className="mx-auto w-full max-w-[1280px] px-5 py-8 sm:px-8">{children}</main>
+        <header className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 sm:px-8">
+          <Breadcrumbs />
+          <SearchPalette />
+        </header>
+        <main className="mx-auto w-full max-w-[1280px] px-5 pb-8 sm:px-8">{children}</main>
       </div>
     </div>
   );

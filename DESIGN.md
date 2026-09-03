@@ -101,6 +101,8 @@ All interface text. Body 14px/400, headings 24–48px/600, buttons 13–14px/500
 | Input 灰底无边，focus 发丝描边 | 全部表单 |
 | Badge solid / soft | 状态：履约中/已开具用 solid；草稿用 soft |
 | Sidebar `#fafafa` | 左侧导航，不要再画分割线 |
+| Breadcrumb | 顶栏层级路径：分隔符 `#737373`，当前段 `#0a0a0a` |
+| Search trigger | 顶栏灰底胶囊，右侧 `⌘K`，打开命令面板 |
 | Destructive `#e7000b` | 仅「删除」 |
 
 合同 `/contracts`、发票 `/invoices` 保持独立。两边主按钮都是黑底，不再用双彩色编码。
