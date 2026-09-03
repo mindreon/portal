@@ -1,17 +1,12 @@
 import type { Metadata } from "next";
-import { Hedvig_Letters_Serif, Inter } from "next/font/google";
+import { Geist } from "next/font/google";
 
 import "./globals.css";
 
-const hedvig = Hedvig_Letters_Serif({
-  subsets: ["latin"],
-  variable: "--font-hedvig",
-});
-
-const inter = Inter({
+const geist = Geist({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
-  variable: "--font-inter-ui",
+  variable: "--font-geist-ui",
 });
 
 export const metadata: Metadata = {
@@ -22,7 +17,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-CN">
-      <body className={`${hedvig.variable} ${inter.variable} antialiased`}>{children}</body>
+      <body className={`${geist.variable} antialiased`}>{children}</body>
     </html>
   );
 }

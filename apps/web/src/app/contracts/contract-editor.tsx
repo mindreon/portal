@@ -83,7 +83,7 @@ export function ContractEditor({ contractId }: { contractId?: number }) {
   return (
     <AppShell>
       <PageHeader eyebrow="Contracts" title={contractId ? "编辑合同" : "新建合同"} />
-      <form onSubmit={onSubmit} className="ui-card max-w-2xl space-y-4 p-8">
+      <form onSubmit={onSubmit} className="ui-card max-w-2xl space-y-4 p-5">
         <FormError message={error} />
         <Field label="合同名称">
           <input required value={form.title} onChange={(e) => update("title", e.target.value)} className="ui-input" />
@@ -129,7 +129,7 @@ export function ContractEditor({ contractId }: { contractId?: number }) {
             保存
           </button>
           {contractId ? (
-            <button type="button" onClick={onDelete} className="text-body-sm font-medium text-slate hover:underline">
+            <button type="button" onClick={onDelete} className="ui-btn ui-btn-danger">
               删除
             </button>
           ) : null}

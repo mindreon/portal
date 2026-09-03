@@ -9,7 +9,7 @@ import { api } from "@/lib/api";
 import type { CurrentUser } from "@/lib/types";
 
 const NAV = [
-  { href: "/", label: "总览", hint: "今日节奏" },
+  { href: "/", label: "总览", hint: "工作台" },
   { href: "/contracts", label: "合同", hint: "独立模块" },
   { href: "/invoices", label: "发票", hint: "独立模块" },
 ];
@@ -33,37 +33,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-canvas lg:grid lg:grid-cols-[240px_1fr]">
-      <aside className="bg-soft-meadow px-6 py-8 lg:min-h-screen">
+      <aside className="bg-surface-alt px-5 py-6 lg:min-h-screen">
         <LogoLockup />
-        <nav className="mt-10 space-y-2">
+        <nav className="mt-8 space-y-1">
           {NAV.map((item) => {
             const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`block rounded-[1440px] px-[22px] py-3 ${
-                  active ? "bg-canvas font-semibold text-deep-ink" : "text-deep-ink hover:bg-canvas/70"
+                className={`block rounded-[18px] px-3 py-2 ${
+                  active ? "bg-paper font-medium text-ink" : "text-ink hover:bg-paper"
                 }`}
               >
-                <span className="block text-[16px] font-medium">{item.label}</span>
-                <span className="block text-[10px] font-medium uppercase tracking-[-0.02em] text-slate">
-                  {item.hint}
-                </span>
+                <span className="block text-[14px]">{item.label}</span>
+                <span className="block text-[12px] tracking-[0.6px] text-mid-gray uppercase">{item.hint}</span>
               </Link>
             );
           })}
         </nav>
-        <div className="mt-12 border-t border-charcoal/20 pt-6 text-body-sm">
-          <p className="font-medium text-deep-ink">{user?.name ?? "加载中…"}</p>
-          <p className="mt-1 text-slate">{user?.role === "admin" ? "管理员" : "成员"}</p>
-          <button type="button" onClick={logout} className="mt-3 font-medium text-deep-ink underline-offset-4 hover:underline">
+        <div className="mt-10 pt-5 text-body">
+          <p className="font-medium text-ink">{user?.name ?? "加载中…"}</p>
+          <p className="mt-1 text-mid-gray">{user?.role === "admin" ? "管理员" : "成员"}</p>
+          <button type="button" onClick={logout} className="mt-3 font-medium text-ink underline-offset-4 hover:underline">
             退出登录
           </button>
         </div>
       </aside>
       <div>
-        <main className="mx-auto w-full max-w-[1200px] px-6 py-10 sm:px-8">{children}</main>
+        <main className="mx-auto w-full max-w-[1280px] px-5 py-8 sm:px-8">{children}</main>
       </div>
     </div>
   );

@@ -3,7 +3,6 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
-import { GardenBlobs } from "@/components/garden-blobs";
 import { LogoMark } from "@/components/logo";
 import { FormError } from "@/components/ui";
 import { api } from "@/lib/api";
@@ -57,42 +56,41 @@ function LoginForm() {
   const devOn = Boolean(config?.dev_login_enabled);
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-canvas px-4">
-      <GardenBlobs />
-      <div className="ui-card relative z-10 w-full max-w-md p-8 sm:p-12">
-        <div className="mb-6 flex items-center gap-3">
-          <LogoMark size={40} />
+    <div className="flex min-h-screen items-center justify-center bg-canvas px-4">
+      <div className="ui-card w-full max-w-md p-5">
+        <div className="mb-5 flex items-center gap-2">
+          <LogoMark />
           <p className="eyebrow">Portal · Internal</p>
         </div>
-        <h1 className="heading-lg">欢迎回来</h1>
-        <p className="mt-4 text-body text-slate">
+        <h1 className="heading-display">欢迎回来</h1>
+        <p className="mt-3 text-body text-mid-gray">
           正式环境用飞书进入。合同和发票是两套独立模块，登录后各走各的页面。
         </p>
 
-        <div className="mt-5">
+        <div className="mt-4">
           <FormError message={error} />
         </div>
 
-        <div className="mt-8 space-y-4">
+        <div className="mt-6 space-y-3">
           {feishuOn ? (
             <button type="button" onClick={loginFeishu} disabled={busy} className="ui-btn ui-btn-primary w-full">
               使用飞书登录
             </button>
           ) : (
-            <p className="text-body-sm text-slate">
-              还没填写 <code className="font-medium text-deep-ink">FEISHU_APP_ID</code>
-              。配好飞书后，这里会出现黄色登录按钮。
+            <p className="text-body text-mid-gray">
+              还没填写 <code className="font-medium text-ink">FEISHU_APP_ID</code>
+              。配好飞书后，这里会出现主登录按钮。
             </p>
           )}
 
           {devOn ? (
             <form onSubmit={loginDev} className="space-y-3">
-              <label className="block text-body-sm text-slate">
+              <label className="block text-body text-mid-gray">
                 开发登录显示名
                 <input
                   value={name}
                   onChange={(event) => setName(event.target.value)}
-                  className="ui-input mt-2"
+                  className="ui-input mt-1.5"
                 />
               </label>
               <button

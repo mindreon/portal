@@ -27,18 +27,18 @@ export default function InvoicesPage() {
           </Link>
         }
       />
-      <p className="-mt-4 mb-8 text-body-sm text-slate">
+      <p className="-mt-3 mb-5 text-body text-mid-gray">
         独立模块。发票可以单独开，也可以在表单里选择关联某份合同。
       </p>
 
       <div className="ui-card overflow-hidden">
-        <table className="w-full text-left text-body-sm">
-          <thead className="text-slate">
+        <table className="w-full text-left text-body">
+          <thead className="text-mid-gray">
             <tr>
-              <th className="px-6 py-4 font-medium">发票</th>
-              <th className="px-6 py-4 font-medium">对方</th>
-              <th className="px-6 py-4 font-medium">金额</th>
-              <th className="px-6 py-4 font-medium">状态</th>
+              <th className="px-5 py-3 font-medium">发票</th>
+              <th className="px-5 py-3 font-medium">对方</th>
+              <th className="px-5 py-3 font-medium">金额</th>
+              <th className="px-5 py-3 font-medium">状态</th>
             </tr>
           </thead>
           <tbody>
@@ -50,16 +50,16 @@ export default function InvoicesPage() {
               </tr>
             ) : (
               rows.map((row) => (
-                <tr key={row.id} className="border-t border-charcoal/15">
-                  <td className="px-6 py-4">
+                <tr key={row.id} className="border-t border-hairline">
+                  <td className="px-5 py-3">
                     <Link href={`/invoices/${row.id}`} className="font-medium hover:underline">
                       {row.title}
                     </Link>
-                    <p className="text-[12px] text-slate">{row.invoice_no}</p>
+                    <p className="text-[12px] text-mid-gray">{row.invoice_no}</p>
                   </td>
-                  <td className="px-6 py-4">{row.counterparty}</td>
-                  <td className="px-6 py-4">{money(row.amount, row.currency)}</td>
-                  <td className="px-6 py-4">
+                  <td className="px-5 py-3">{row.counterparty}</td>
+                  <td className="px-5 py-3">{money(row.amount, row.currency)}</td>
+                  <td className="px-5 py-3">
                     <StatusBadge kind="invoice" value={row.status} />
                   </td>
                 </tr>
