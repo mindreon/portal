@@ -83,14 +83,14 @@ export function ContractEditor({ contractId }: { contractId?: number }) {
   return (
     <AppShell>
       <PageHeader eyebrow="Contracts" title={contractId ? "编辑合同" : "新建合同"} />
-      <form onSubmit={onSubmit} className="ui-card max-w-2xl space-y-4 rounded-3xl p-6">
+      <form onSubmit={onSubmit} className="ui-card max-w-2xl space-y-4 p-8">
         <FormError message={error} />
         <Field label="合同名称">
           <input required value={form.title} onChange={(e) => update("title", e.target.value)} className="ui-input" />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="合同编号">
-            <input required value={form.contract_no} onChange={(e) => update("contract_no", e.target.value)} className="ui-input font-mono-num" />
+            <input required value={form.contract_no} onChange={(e) => update("contract_no", e.target.value)} className="ui-input" />
           </Field>
           <Field label="对方名称">
             <input required value={form.counterparty} onChange={(e) => update("counterparty", e.target.value)} className="ui-input" />
@@ -98,7 +98,7 @@ export function ContractEditor({ contractId }: { contractId?: number }) {
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="金额">
-            <input required type="number" step="0.01" min="0" value={form.amount} onChange={(e) => update("amount", e.target.value)} className="ui-input font-mono-num" />
+            <input required type="number" step="0.01" min="0" value={form.amount} onChange={(e) => update("amount", e.target.value)} className="ui-input" />
           </Field>
           <Field label="币种">
             <input value={form.currency} onChange={(e) => update("currency", e.target.value)} className="ui-input" />
@@ -125,11 +125,11 @@ export function ContractEditor({ contractId }: { contractId?: number }) {
           <textarea value={form.notes} onChange={(e) => update("notes", e.target.value)} rows={4} className="ui-input" />
         </Field>
         <div className="flex items-center gap-3 pt-2">
-          <button type="submit" disabled={busy} className="ui-btn ui-btn-mint">
+          <button type="submit" disabled={busy} className="ui-btn ui-btn-primary">
             保存
           </button>
           {contractId ? (
-            <button type="button" onClick={onDelete} className="text-sm text-[var(--danger)] hover:underline">
+            <button type="button" onClick={onDelete} className="text-body-sm font-medium text-slate hover:underline">
               删除
             </button>
           ) : null}

@@ -1,27 +1,28 @@
 import type { Metadata } from "next";
-import { JetBrains_Mono, Outfit } from "next/font/google";
+import { Hedvig_Letters_Serif, Inter } from "next/font/google";
 
 import "./globals.css";
 
-const sans = Outfit({
+const hedvig = Hedvig_Letters_Serif({
   subsets: ["latin"],
-  variable: "--font-sans",
+  variable: "--font-hedvig",
 });
 
-const mono = JetBrains_Mono({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-mono",
+  weight: ["400", "500", "600"],
+  variable: "--font-inter-ui",
 });
 
 export const metadata: Metadata = {
   title: "Portal · 内部业务系统",
-  description: "年轻 AI 团队的合同与发票工作台",
+  description: "合同与发票两个独立模块的公司内部工作台",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-CN">
-      <body className={`${sans.variable} ${mono.variable} antialiased`}>{children}</body>
+      <body className={`${hedvig.variable} ${inter.variable} antialiased`}>{children}</body>
     </html>
   );
 }

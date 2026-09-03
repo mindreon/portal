@@ -22,23 +22,23 @@ export default function InvoicesPage() {
         eyebrow="Invoices"
         title="发票"
         action={
-          <Link href="/invoices/new" className="ui-btn ui-btn-indigo">
+          <Link href="/invoices/new" className="ui-btn ui-btn-primary">
             新建发票
           </Link>
         }
       />
-      <p className="-mt-4 mb-6 text-sm text-[var(--muted)]">
-        这是独立模块。发票可以单独开，也可以在表单里选择关联某份合同。
+      <p className="-mt-4 mb-8 text-body-sm text-slate">
+        独立模块。发票可以单独开，也可以在表单里选择关联某份合同。
       </p>
 
-      <div className="ui-card overflow-hidden rounded-3xl">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-white/5 text-[var(--muted)]">
+      <div className="ui-card overflow-hidden">
+        <table className="w-full text-left text-body-sm">
+          <thead className="text-slate">
             <tr>
-              <th className="px-4 py-3 font-medium">发票</th>
-              <th className="px-4 py-3 font-medium">对方</th>
-              <th className="px-4 py-3 font-medium">金额</th>
-              <th className="px-4 py-3 font-medium">状态</th>
+              <th className="px-6 py-4 font-medium">发票</th>
+              <th className="px-6 py-4 font-medium">对方</th>
+              <th className="px-6 py-4 font-medium">金额</th>
+              <th className="px-6 py-4 font-medium">状态</th>
             </tr>
           </thead>
           <tbody>
@@ -50,16 +50,16 @@ export default function InvoicesPage() {
               </tr>
             ) : (
               rows.map((row) => (
-                <tr key={row.id} className="border-t border-[var(--line)]">
-                  <td className="px-4 py-3">
-                    <Link href={`/invoices/${row.id}`} className="font-medium hover:text-[#c4b8ff]">
+                <tr key={row.id} className="border-t border-charcoal/15">
+                  <td className="px-6 py-4">
+                    <Link href={`/invoices/${row.id}`} className="font-medium hover:underline">
                       {row.title}
                     </Link>
-                    <p className="font-mono-num text-xs text-[var(--muted)]">{row.invoice_no}</p>
+                    <p className="text-[12px] text-slate">{row.invoice_no}</p>
                   </td>
-                  <td className="px-4 py-3">{row.counterparty}</td>
-                  <td className="font-mono-num px-4 py-3">{money(row.amount, row.currency)}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-6 py-4">{row.counterparty}</td>
+                  <td className="px-6 py-4">{money(row.amount, row.currency)}</td>
+                  <td className="px-6 py-4">
                     <StatusBadge kind="invoice" value={row.status} />
                   </td>
                 </tr>

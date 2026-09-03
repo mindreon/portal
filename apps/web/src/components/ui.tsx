@@ -12,8 +12,8 @@ export function PageHeader({
   return (
     <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
       <div>
-        <p className="text-xs font-medium uppercase tracking-[0.22em] text-[var(--mint)]">{eyebrow}</p>
-        <h2 className="mt-2 text-3xl font-semibold tracking-tight">{title}</h2>
+        <p className="eyebrow">{eyebrow}</p>
+        <h2 className="heading mt-2">{title}</h2>
       </div>
       {action}
     </div>
@@ -22,8 +22,8 @@ export function PageHeader({
 
 export function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="block text-sm">
-      <span className="mb-1.5 block text-[var(--muted)]">{label}</span>
+    <label className="block text-body-sm text-slate">
+      <span className="mb-2 block font-medium text-deep-ink">{label}</span>
       {children}
     </label>
   );
@@ -32,19 +32,19 @@ export function Field({ label, children }: { label: string; children: React.Reac
 export function FormError({ message }: { message: string }) {
   if (!message) return null;
   return (
-    <p className="rounded-xl border border-[var(--danger)]/30 bg-[var(--danger)]/10 px-3 py-2 text-sm text-[var(--danger)]">
+    <p className="rounded-[24px] bg-soft-meadow px-4 py-3 text-body-sm text-deep-ink">
       {message}
     </p>
   );
 }
 
 export function EmptyHint({ children }: { children: React.ReactNode }) {
-  return <p className="px-4 py-10 text-center text-sm text-[var(--muted)]">{children}</p>;
+  return <p className="px-4 py-10 text-center text-body-sm text-slate">{children}</p>;
 }
 
 export function TextLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Link href={href} className="text-sm text-[var(--mint)] hover:underline">
+    <Link href={href} className="text-body-sm font-medium text-deep-ink underline-offset-4 hover:underline">
       {children}
     </Link>
   );

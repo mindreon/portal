@@ -1,13 +1,13 @@
 import { CONTRACT_STATUS_LABEL, INVOICE_STATUS_LABEL } from "@/lib/types";
 
 const TONES: Record<string, string> = {
-  draft: "bg-white/10 text-[var(--muted)]",
-  active: "bg-[var(--mint)]/15 text-[var(--mint)]",
-  issued: "bg-[var(--indigo)]/20 text-[#c4b8ff]",
-  paid: "bg-[var(--mint)]/15 text-[var(--mint)]",
-  expired: "bg-amber-400/15 text-amber-200",
-  terminated: "bg-[var(--danger)]/12 text-[var(--danger)]",
-  void: "bg-[var(--danger)]/12 text-[var(--danger)]",
+  draft: "bg-canvas text-slate",
+  active: "bg-hi-yellow text-deep-ink",
+  issued: "bg-hi-yellow text-deep-ink",
+  paid: "bg-deep-ink text-white",
+  expired: "bg-canvas text-slate",
+  terminated: "bg-canvas text-slate",
+  void: "bg-canvas text-slate",
 };
 
 export function StatusBadge({
@@ -19,7 +19,9 @@ export function StatusBadge({
 }) {
   const label = (kind === "contract" ? CONTRACT_STATUS_LABEL : INVOICE_STATUS_LABEL)[value] ?? value;
   return (
-    <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${TONES[value] ?? "bg-white/10"}`}>
+    <span
+      className={`inline-block rounded-[1440px] px-3 py-1 text-[10px] font-medium uppercase tracking-[-0.02em] ${TONES[value] ?? "bg-canvas text-slate"}`}
+    >
       {label}
     </span>
   );

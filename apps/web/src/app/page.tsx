@@ -29,14 +29,14 @@ export default function HomePage() {
       <PageHeader eyebrow="Dashboard" title="今日节奏" />
 
       <section className="grid gap-4 sm:grid-cols-3">
-        <StatCard title="合同总数" value={String(contracts.length)} href="/contracts" tone="mint" />
-        <StatCard title="履约中" value={String(activeContracts)} href="/contracts" tone="mint" />
-        <StatCard title="待收款发票" value={String(unpaidInvoices)} href="/invoices" tone="indigo" />
+        <StatCard title="合同总数" value={String(contracts.length)} href="/contracts" />
+        <StatCard title="履约中" value={String(activeContracts)} href="/contracts" />
+        <StatCard title="待收款发票" value={String(unpaidInvoices)} href="/invoices" />
       </section>
 
-      <section className="mt-10 grid gap-6 lg:grid-cols-2">
+      <section className="mt-12 grid gap-6 lg:grid-cols-2">
         <RecentList
-          title="合同模块"
+          title="合同"
           href="/contracts"
           empty="合同还是空的，去合同页建第一条。"
           rows={contracts.slice(0, 5).map((item) => ({
@@ -47,7 +47,7 @@ export default function HomePage() {
           }))}
         />
         <RecentList
-          title="发票模块"
+          title="发票"
           href="/invoices"
           empty="发票还是空的，去发票页建第一条。"
           rows={invoices.slice(0, 5).map((item) => ({
@@ -62,22 +62,11 @@ export default function HomePage() {
   );
 }
 
-function StatCard({
-  title,
-  value,
-  href,
-  tone,
-}: {
-  title: string;
-  value: string;
-  href: string;
-  tone: "mint" | "indigo";
-}) {
-  const glow = tone === "mint" ? "hover:shadow-[0_0_28px_var(--glow-mint)]" : "hover:shadow-[0_0_28px_var(--glow-indigo)]";
+function StatCard({ title, value, href }: { title: string; value: string; href: string }) {
   return (
-    <Link href={href} className={`ui-card rounded-3xl p-5 transition ${glow}`}>
-      <p className="text-sm text-[var(--muted)]">{title}</p>
-      <p className="font-mono-num mt-3 text-4xl font-semibold">{value}</p>
+    <Link href={href} className="ui-card block p-8">
+      <p className="text-body-sm text-slate">{title}</p>
+      <p className="heading mt-3">{value}</p>
     </Link>
   );
 }
@@ -94,20 +83,20 @@ function RecentList({
   rows: { id: number; title: string; meta: string; href: string }[];
 }) {
   return (
-    <div className="ui-card rounded-3xl p-5">
-      <div className="mb-4 flex items-end justify-between">
-        <h3 className="text-lg font-semibold">{title}</h3>
+    <div className="ui-card p-8">
+      <div className="mb-6 flex items-end justify-between">
+        <h3 className="heading-sm">{title}</h3>
         <TextLink href={href}>查看全部</TextLink>
       </div>
       {rows.length === 0 ? (
-        <p className="text-sm text-[var(--muted)]">{empty}</p>
+        <p className="text-body-sm text-slate">{empty}</p>
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-3">
           {rows.map((row) => (
             <li key={row.id}>
-              <Link href={row.href} className="block rounded-2xl px-2 py-2 hover:bg-white/5">
-                <p className="font-medium">{row.title}</p>
-                <p className="font-mono-num text-sm text-[var(--muted)]">{row.meta}</p>
+              <Link href={row.href} className="block rounded-[24px] px-2 py-2 hover:bg-canvas">
+                <p className="font-medium text-deep-ink">{row.title}</p>
+                <p className="text-body-sm text-slate">{row.meta}</p>
               </Link>
             </li>
           ))}

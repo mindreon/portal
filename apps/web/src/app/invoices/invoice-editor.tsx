@@ -90,14 +90,14 @@ export function InvoiceEditor({ invoiceId }: { invoiceId?: number }) {
   return (
     <AppShell>
       <PageHeader eyebrow="Invoices" title={invoiceId ? "编辑发票" : "新建发票"} />
-      <form onSubmit={onSubmit} className="ui-card max-w-2xl space-y-4 rounded-3xl p-6">
+      <form onSubmit={onSubmit} className="ui-card max-w-2xl space-y-4 p-8">
         <FormError message={error} />
         <Field label="发票名称">
           <input required value={form.title} onChange={(e) => update("title", e.target.value)} className="ui-input" />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="发票编号">
-            <input required value={form.invoice_no} onChange={(e) => update("invoice_no", e.target.value)} className="ui-input font-mono-num" />
+            <input required value={form.invoice_no} onChange={(e) => update("invoice_no", e.target.value)} className="ui-input" />
           </Field>
           <Field label="对方名称">
             <input required value={form.counterparty} onChange={(e) => update("counterparty", e.target.value)} className="ui-input" />
@@ -105,10 +105,10 @@ export function InvoiceEditor({ invoiceId }: { invoiceId?: number }) {
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="金额">
-            <input required type="number" step="0.01" min="0" value={form.amount} onChange={(e) => update("amount", e.target.value)} className="ui-input font-mono-num" />
+            <input required type="number" step="0.01" min="0" value={form.amount} onChange={(e) => update("amount", e.target.value)} className="ui-input" />
           </Field>
           <Field label="税额">
-            <input required type="number" step="0.01" min="0" value={form.tax_amount} onChange={(e) => update("tax_amount", e.target.value)} className="ui-input font-mono-num" />
+            <input required type="number" step="0.01" min="0" value={form.tax_amount} onChange={(e) => update("tax_amount", e.target.value)} className="ui-input" />
           </Field>
           <Field label="状态">
             <select value={form.status} onChange={(e) => update("status", e.target.value)} className="ui-input">
@@ -142,11 +142,11 @@ export function InvoiceEditor({ invoiceId }: { invoiceId?: number }) {
           <textarea value={form.notes} onChange={(e) => update("notes", e.target.value)} rows={4} className="ui-input" />
         </Field>
         <div className="flex items-center gap-3 pt-2">
-          <button type="submit" disabled={busy} className="ui-btn ui-btn-indigo">
+          <button type="submit" disabled={busy} className="ui-btn ui-btn-primary">
             保存
           </button>
           {invoiceId ? (
-            <button type="button" onClick={onDelete} className="text-sm text-[var(--danger)] hover:underline">
+            <button type="button" onClick={onDelete} className="text-body-sm font-medium text-slate hover:underline">
               删除
             </button>
           ) : null}

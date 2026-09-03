@@ -1,19 +1,55 @@
 @import "tailwindcss";
 
+@theme {
+  --color-deep-ink: #130e30;
+  --color-hi-yellow: #ffe228;
+  --color-moss-green: #59e25d;
+  --color-fuchsia: #e261e5;
+  --color-slate: #5f5c6e;
+  --color-canvas: #f9fbf2;
+  --color-soft-meadow: #eff2e5;
+  --color-charcoal: #222222;
+  --color-onyx: #000000;
+
+  --font-hedvig-letters-serif: var(--font-hedvig), "Noto Serif SC", "Source Han Serif SC", "Songti SC", ui-serif, Georgia, serif;
+  --font-inter: var(--font-inter-ui), "PingFang SC", "Noto Sans SC", ui-sans-serif, system-ui, sans-serif;
+
+  --text-caption: 10px;
+  --text-body-sm: 14px;
+  --text-body: 16px;
+  --text-subheading: 18px;
+  --text-heading-sm: 22px;
+  --text-heading: 32px;
+  --text-heading-lg: 48px;
+  --text-display: 64px;
+
+  --spacing-8: 8px;
+  --spacing-16: 16px;
+  --spacing-24: 24px;
+  --spacing-32: 32px;
+  --spacing-48: 48px;
+  --spacing-64: 64px;
+  --spacing-96: 96px;
+
+  --radius-3xl: 24px;
+  --radius-full: 48px;
+  --radius-full-2: 1440px;
+}
+
 :root {
-  --bg: #07080d;
-  --bg-elevated: #10131c;
-  --card: rgba(16, 19, 28, 0.86);
-  --line: rgba(180, 196, 220, 0.12);
-  --text: #f4f7fb;
-  --muted: #8b95a8;
-  --mint: #3dffc8;
-  --mint-dim: #1fb892;
-  --indigo: #7c6cff;
-  --indigo-deep: #5b4ee0;
-  --danger: #ff7b93;
-  --glow-mint: rgba(61, 255, 200, 0.28);
-  --glow-indigo: rgba(124, 108, 255, 0.28);
+  --color-deep-ink: #130e30;
+  --color-hi-yellow: #ffe228;
+  --color-moss-green: #59e25d;
+  --color-fuchsia: #e261e5;
+  --color-slate: #5f5c6e;
+  --color-canvas: #f9fbf2;
+  --color-soft-meadow: #eff2e5;
+  --color-charcoal: #222222;
+  --color-onyx: #000000;
+
+  --radius-cards: 24px;
+  --radius-buttons: 1440px;
+  --page-max-width: 1200px;
 }
 
 html,
@@ -22,24 +58,13 @@ body {
 }
 
 body {
-  color: var(--text);
-  background:
-    radial-gradient(900px 480px at 8% -10%, rgba(124, 108, 255, 0.18), transparent 55%),
-    radial-gradient(720px 420px at 100% 0%, rgba(61, 255, 200, 0.12), transparent 50%),
-    var(--bg);
-  font-family: var(--font-sans), "PingFang SC", "Noto Sans SC", sans-serif;
-}
-
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: radial-gradient(circle at 30% 20%, black, transparent 75%);
+  color: var(--color-deep-ink);
+  background: var(--color-canvas);
+  font-family: var(--font-inter);
+  font-size: 16px;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  font-feature-settings: "ss01" 1, "cv11" 1;
 }
 
 button,
@@ -47,7 +72,7 @@ input,
 select,
 textarea {
   font: inherit;
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 a {
@@ -55,74 +80,109 @@ a {
 }
 
 ::selection {
-  background: rgba(61, 255, 200, 0.28);
+  background: var(--color-hi-yellow);
+  color: var(--color-deep-ink);
 }
 
-input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(1);
+.font-hedvig {
+  font-family: var(--font-hedvig-letters-serif);
+  letter-spacing: -0.01em;
 }
 
-.font-mono-num {
-  font-family: var(--font-mono), ui-monospace, monospace;
-  font-variant-numeric: tabular-nums;
+.eyebrow {
+  font-family: var(--font-inter);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  color: var(--color-slate);
+}
+
+.heading {
+  font-family: var(--font-hedvig-letters-serif);
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.32px;
+  color: var(--color-deep-ink);
+}
+
+.heading-lg {
+  font-family: var(--font-hedvig-letters-serif);
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.48px;
+  color: var(--color-deep-ink);
+}
+
+.heading-sm {
+  font-family: var(--font-hedvig-letters-serif);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.22px;
+  color: var(--color-deep-ink);
 }
 
 .ui-card {
-  border: 1px solid var(--line);
-  background: var(--card);
-  backdrop-filter: blur(16px);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.02), 0 18px 40px rgba(0, 0, 0, 0.28);
+  background: var(--color-soft-meadow);
+  border-radius: var(--radius-cards);
 }
 
 .ui-input {
   width: 100%;
-  border-radius: 0.9rem;
-  border: 1px solid var(--line);
-  background: rgba(7, 8, 13, 0.7);
-  padding: 0.65rem 0.85rem;
-  color: var(--text);
+  border-radius: 1440px;
+  border: 1px solid var(--color-onyx);
+  background: #ffffff;
+  padding: 12px 22px;
+  color: var(--color-deep-ink);
   outline: none;
 }
 
+.ui-input::placeholder {
+  color: var(--color-slate);
+}
+
 .ui-input:focus {
-  border-color: rgba(61, 255, 200, 0.55);
-  box-shadow: 0 0 0 3px var(--glow-mint);
+  outline: 2px solid var(--color-hi-yellow);
+  outline-offset: 2px;
+}
+
+textarea.ui-input {
+  border-radius: 24px;
 }
 
 .ui-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
-  padding: 0.65rem 1.1rem;
-  font-size: 0.95rem;
-  font-weight: 600;
-  transition: transform 120ms ease, opacity 120ms ease, box-shadow 120ms ease;
-}
-
-.ui-btn:hover {
-  transform: translateY(-1px);
+  border-radius: 1440px;
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.2;
+  border: 0;
 }
 
 .ui-btn:disabled {
   opacity: 0.55;
-  transform: none;
 }
 
-.ui-btn-mint {
-  background: linear-gradient(135deg, var(--mint), #18e0b0);
-  color: #06241b;
-  box-shadow: 0 0 24px var(--glow-mint);
+.ui-btn-primary {
+  background: var(--color-hi-yellow);
+  color: var(--color-deep-ink);
 }
 
-.ui-btn-indigo {
-  background: linear-gradient(135deg, var(--indigo), #4f46e5);
-  color: white;
-  box-shadow: 0 0 24px var(--glow-indigo);
+.ui-btn-secondary {
+  background: var(--color-deep-ink);
+  color: #ffffff;
+  padding: 12px 22px;
 }
 
-.ui-btn-ghost {
-  border: 1px solid var(--line);
-  color: var(--text);
-  background: transparent;
+.garden-blob {
+  position: absolute;
+  border-radius: 60% 40% 55% 45%;
+  pointer-events: none;
 }
