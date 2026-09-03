@@ -1,0 +1,34 @@
+# 环境与密钥，永远不要提交真实 .env
+.env
+.env.local
+.env.*.local
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+dist/
+build/
+apps/api/*.db
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+apps/web/.turbo/
+
+# 编辑器与系统
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# 日志与本地数据
+*.log
+postgres_data/
+caddy_data/
+caddy_config/
