@@ -122,7 +122,7 @@ def contract_summary(
         active_count=len([item for item in rows if item.status == "active"]),
         total_amount=total,
         collected_amount=collected,
-        outstanding_amount=total - collected,
+        outstanding_amount=max(Decimal("0"), total - collected),
     )
 
 
