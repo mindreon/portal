@@ -15,7 +15,6 @@ dependencies = [
     "python-multipart>=0.0.17",
     "pypdf>=5.0.0",
     "pypdfium2>=4.30.0",
-    "pytesseract>=0.3.13",
     "pillow>=11.0.0",
 ]
 

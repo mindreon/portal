@@ -12,6 +12,7 @@ os.environ.setdefault("SECRET_KEY", "test-secret-key-at-least-32-bytes-long")
 os.environ.setdefault("AUTH_ALLOW_DEV_LOGIN", "true")
 os.environ.setdefault("FEISHU_APP_ID", "")
 os.environ.setdefault("UPLOAD_DIR", "/tmp/portal-test-uploads")
+os.environ.setdefault("QWEN_API_KEY", "")
 
 from collections.abc import Generator
 

@@ -7,8 +7,7 @@ ENV UV_COMPILE_BYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 COPY pyproject.toml uv.lock ./
-RUN apk add --no-cache tesseract-ocr tesseract-ocr-data-chi_sim \
-    && uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev
 
 COPY app ./app
 COPY alembic ./alembic

@@ -171,6 +171,22 @@ def extract_fields(text: str) -> ExtractedFields:
     return result
 
 
+def has_enough_draft_fields(fields: ExtractedFields) -> bool:
+    """
+    扫描件按页 OCR 时用：草稿核心字段齐了就停，少花 token。
+
+    合同：编号 + 甲乙方 + 金额。没编号就继续往后翻，尽量把编号找出来。
+    发票：发票代码 + 发票号码。
+    """
+    if fields.contract_no and fields.party_a and fields.party_b and fields.amount is not None:
+        return True
+    if fields.invoices:
+        invoice = fields.invoices[0]
+        if invoice.invoice_code and invoice.invoice_no:
+            return True
+    return False
+
+
 def normalize_contract_no(value: str | None) -> str | None:
     """空编号存 NULL，这样多份未编号合同不会撞唯一约束。"""
     if value is None:
