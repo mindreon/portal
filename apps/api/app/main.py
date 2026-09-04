@@ -17,7 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
 from app.db.base import Base
 from app.db.session import engine
-from app.modules import auth, contracts, invoices
+from app.modules import auth, contracts, imports, invoices
 
 # 导入模型，确保 Base.metadata 里有所有表
 from app import models as _models  # noqa: F401
@@ -45,6 +45,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router, prefix="/api/v1")
+app.include_router(imports.router, prefix="/api/v1")
 app.include_router(contracts.router, prefix="/api/v1")
 app.include_router(invoices.router, prefix="/api/v1")
 

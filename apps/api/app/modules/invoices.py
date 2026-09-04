@@ -91,3 +91,11 @@ def _validate(db: Session, payload: InvoiceIn) -> None:
         raise HTTPException(status_code=400, detail="发票状态不合法")
     if payload.contract_id is not None and db.get(Contract, payload.contract_id) is None:
         raise HTTPException(status_code=400, detail="关联的合同不存在")
+    if payload.schedule_id is not None:
+        from app.models.payment import PaymentSchedule
+
+        schedule = db.get(PaymentSchedule, payload.schedule_id)
+        if schedule is None:
+            raise HTTPException(status_code=400, detail="回款期次不存在")
+        if payload.contract_id and schedule.contract_id != payload.contract_id:
+            raise HTTPException(status_code=400, detail="期次不属于这份合同")

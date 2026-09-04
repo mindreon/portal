@@ -45,6 +45,24 @@ export async function api<T>(path: string, options: ApiOptions = {}): Promise<T>
   return data as T;
 }
 
+export async function uploadFiles<T>(path: string, files: File[]): Promise<T> {
+  const body = new FormData();
+  files.forEach((file) => body.append("files", file));
+  const response = await fetch(path, { method: "POST", credentials: "include", body });
+  if (response.status === 401) {
+    if (typeof window !== "undefined") window.location.href = "/login";
+    throw new ApiError(401, "未登录");
+  }
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : null;
+  if (!response.ok) {
+    const detail = data?.detail;
+    const message = typeof detail === "string" ? detail : "上传失败";
+    throw new ApiError(response.status, message);
+  }
+  return data as T;
+}
+
 export function money(value: string | number, currency = "CNY"): string {
   const amount = Number(value);
   const formatted = Number.isFinite(amount)

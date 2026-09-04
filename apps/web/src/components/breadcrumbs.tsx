@@ -3,26 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-type Crumb = { href?: string; label: string };
-
-function crumbsFor(pathname: string): Crumb[] {
-  if (pathname === "/") return [{ label: "总览" }];
-  if (pathname === "/contracts") return [{ href: "/", label: "总览" }, { label: "合同" }];
-  if (pathname === "/contracts/new") {
-    return [{ href: "/", label: "总览" }, { href: "/contracts", label: "合同" }, { label: "新建" }];
-  }
-  if (pathname.startsWith("/contracts/")) {
-    return [{ href: "/", label: "总览" }, { href: "/contracts", label: "合同" }, { label: "编辑" }];
-  }
-  if (pathname === "/invoices") return [{ href: "/", label: "总览" }, { label: "发票" }];
-  if (pathname === "/invoices/new") {
-    return [{ href: "/", label: "总览" }, { href: "/invoices", label: "发票" }, { label: "新建" }];
-  }
-  if (pathname.startsWith("/invoices/")) {
-    return [{ href: "/", label: "总览" }, { href: "/invoices", label: "发票" }, { label: "编辑" }];
-  }
-  return [{ label: "总览" }];
-}
+import { crumbsFor } from "@/lib/modules";
 
 function Chevron() {
   return (

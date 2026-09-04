@@ -14,6 +14,7 @@ __pycache__/
 dist/
 build/
 apps/api/*.db
+apps/api/data/
 
 # Node / Next.js
 node_modules/

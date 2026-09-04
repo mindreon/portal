@@ -6,21 +6,31 @@ import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { Field, FormError, PageHeader } from "@/components/ui";
 import { api } from "@/lib/api";
-import { CONTRACT_STATUS_LABEL, type Contract } from "@/lib/types";
+import { CONTRACT_STATUS_LABEL, OUR_ROLE_LABEL, type Contract } from "@/lib/types";
 
 const EMPTY = {
   title: "",
   contract_no: "",
+  party_a: "",
+  party_b: "",
+  our_role: "",
   counterparty: "",
   amount: "0",
   currency: "CNY",
   status: "draft",
+  signed_at: "",
   start_date: "",
   end_date: "",
   notes: "",
 };
 
-export function ContractEditor({ contractId }: { contractId?: number }) {
+export function ContractEditor({
+  contractId,
+  onSwitchToUpload,
+}: {
+  contractId?: number;
+  onSwitchToUpload?: () => void;
+}) {
   const router = useRouter();
   const [form, setForm] = useState(EMPTY);
   const [error, setError] = useState("");
@@ -31,11 +41,15 @@ export function ContractEditor({ contractId }: { contractId?: number }) {
     api<Contract>(`/api/v1/contracts/${contractId}`).then((item) => {
       setForm({
         title: item.title,
-        contract_no: item.contract_no,
+        contract_no: item.contract_no ?? "",
+        party_a: item.party_a,
+        party_b: item.party_b,
+        our_role: item.our_role,
         counterparty: item.counterparty,
         amount: item.amount,
         currency: item.currency,
         status: item.status,
+        signed_at: item.signed_at ?? "",
         start_date: item.start_date ?? "",
         end_date: item.end_date ?? "",
         notes: item.notes ?? "",
@@ -53,6 +67,8 @@ export function ContractEditor({ contractId }: { contractId?: number }) {
     setError("");
     const payload = {
       ...form,
+      contract_no: form.contract_no || null,
+      signed_at: form.signed_at || null,
       start_date: form.start_date || null,
       end_date: form.end_date || null,
       notes: form.notes || null,
@@ -89,13 +105,30 @@ export function ContractEditor({ contractId }: { contractId?: number }) {
           <input required value={form.title} onChange={(e) => update("title", e.target.value)} className="ui-input" />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="合同编号">
-            <input required value={form.contract_no} onChange={(e) => update("contract_no", e.target.value)} className="ui-input" />
+          <Field label="合同编号（可空）">
+            <input value={form.contract_no} onChange={(e) => update("contract_no", e.target.value)} className="ui-input" />
           </Field>
-          <Field label="对方名称">
-            <input required value={form.counterparty} onChange={(e) => update("counterparty", e.target.value)} className="ui-input" />
+          <Field label="我方是">
+            <select value={form.our_role} onChange={(e) => update("our_role", e.target.value)} className="ui-input">
+              {Object.entries(OUR_ROLE_LABEL).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
           </Field>
         </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="甲方主体">
+            <input value={form.party_a} onChange={(e) => update("party_a", e.target.value)} className="ui-input" />
+          </Field>
+          <Field label="乙方主体">
+            <input value={form.party_b} onChange={(e) => update("party_b", e.target.value)} className="ui-input" />
+          </Field>
+        </div>
+        <Field label="对方名称（可不填，保存时按甲/乙和「我方是」推算）">
+          <input value={form.counterparty} onChange={(e) => update("counterparty", e.target.value)} className="ui-input" />
+        </Field>
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="金额">
             <input required type="number" step="0.01" min="0" value={form.amount} onChange={(e) => update("amount", e.target.value)} className="ui-input" />
@@ -114,6 +147,9 @@ export function ContractEditor({ contractId }: { contractId?: number }) {
           </Field>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="签订时间">
+            <input type="date" value={form.signed_at} onChange={(e) => update("signed_at", e.target.value)} className="ui-input" />
+          </Field>
           <Field label="开始日期">
             <input type="date" value={form.start_date} onChange={(e) => update("start_date", e.target.value)} className="ui-input" />
           </Field>
@@ -128,6 +164,11 @@ export function ContractEditor({ contractId }: { contractId?: number }) {
           <button type="submit" disabled={busy} className="ui-btn ui-btn-primary">
             保存
           </button>
+          {onSwitchToUpload ? (
+            <button type="button" onClick={onSwitchToUpload} className="ui-btn ui-btn-secondary">
+              改用上传 PDF
+            </button>
+          ) : null}
           {contractId ? (
             <button type="button" onClick={onDelete} className="ui-btn ui-btn-danger">
               删除

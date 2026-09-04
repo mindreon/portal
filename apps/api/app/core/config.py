@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     feishu_authorize_url: str = "https://accounts.feishu.cn/open-apis/authen/v1/authorize"
     feishu_token_url: str = "https://open.feishu.cn/open-apis/authen/v2/oauth/token"
     feishu_user_info_url: str = "https://open.feishu.cn/open-apis/authen/v1/user_info"
+    upload_dir: str = "./data/uploads"
 
     @property
     def feishu_enabled(self) -> bool:
