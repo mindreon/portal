@@ -42,7 +42,8 @@ def qwen_ocr_image(image_jpeg: bytes) -> tuple[str, str | None]:
         {"type": "text", "text": OCR_PROMPT},
     ]
 
-    url = settings.qwen_base_url.rstrip("/") + "/chat/completions"
+    base = settings.qwen_base_url.strip() or "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    url = base.rstrip("/") + "/chat/completions"
     payload = {
         "model": settings.qwen_ocr_model,
         "messages": [{"role": "user", "content": content}],

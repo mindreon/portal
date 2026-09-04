@@ -186,7 +186,7 @@ def test_qwen_request_is_single_page_and_disables_thinking(monkeypatch) -> None:
     payload = captured["json"]
     assert payload["model"] == "qwen3.7-plus"
     assert payload["enable_thinking"] is False
-    assert captured["url"].endswith("/chat/completions")
+    assert captured["url"] == "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
     content = payload["messages"][0]["content"]
     images = [item for item in content if item.get("type") == "image_url"]
     assert len(images) == 1
