@@ -17,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
 from app.db.base import Base
 from app.db.session import engine
+from app.db.sqlite_patch import ensure_sqlite_columns
 from app.modules import auth, contracts, imports, invoices
 
 # 导入模型，确保 Base.metadata 里有所有表
@@ -30,6 +31,7 @@ async def lifespan(_app: FastAPI):
     生产 Docker 启动脚本会先执行 alembic upgrade head。
     """
     Base.metadata.create_all(bind=engine)
+    ensure_sqlite_columns()
     yield
 
 

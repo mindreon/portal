@@ -1,9 +1,11 @@
 """
 合同上传批次：解压 zip、解析 PDF、按编号分堆（没编号则一文件一份草稿）。
+同一份文件（内容哈希相同）不会再生成一条合同/附件。
 """
 
 from __future__ import annotations
 
+import hashlib
 import re
 import uuid
 import zipfile
@@ -24,8 +26,9 @@ from app.services.extract import (
     build_schedules,
     derive_counterparty,
     extract_fields,
-    grouping_key,
+    identity_key,
     normalize_contract_no,
+    unnumbered_fingerprint,
 )
 from app.services.pdf_parse import parse_pdf_bytes
 
@@ -45,6 +48,10 @@ def _write_bytes(batch_id: int, original_name: str, data: bytes) -> Path:
     path = folder / f"{uuid.uuid4().hex[:10]}_{_safe_name(original_name)}"
     path.write_bytes(data)
     return path
+
+
+def _sha256(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
 
 
 def _expand_uploads(files: list[tuple[str, bytes]]) -> list[tuple[str, bytes]]:
@@ -101,6 +108,37 @@ def _prepare_contract(payload: ExtractedFields, filename: str, owner_id: int, ba
     )
 
 
+def _find_existing_file(db: Session, digest: str, seen: dict[str, ContractFile]) -> ContractFile | None:
+    if digest in seen:
+        return seen[digest]
+    return db.scalar(select(ContractFile).where(ContractFile.content_hash == digest))
+
+
+def _find_existing_contract(
+    db: Session,
+    fields: ExtractedFields,
+    existing_by_no: dict[str, Contract],
+) -> tuple[Contract | None, str | None]:
+    numbered = normalize_contract_no(fields.contract_no)
+    if numbered and numbered in existing_by_no:
+        return existing_by_no[numbered], f"编号 {numbered} 已在库中，附件并入已有合同。"
+    if unnumbered_fingerprint(fields):
+        twin = db.scalar(
+            select(Contract)
+            .where(
+                Contract.contract_no.is_(None),
+                Contract.party_a == fields.party_a,
+                Contract.party_b == fields.party_b,
+                Contract.amount == fields.amount,
+                Contract.signed_at == fields.signed_at,
+            )
+            .order_by(Contract.id)
+        )
+        if twin is not None:
+            return twin, f"甲方/乙方/金额/签订日与已有合同「{twin.title}」相同，已并入，避免重复草稿。"
+    return None, None
+
+
 def run_import(db: Session, user: User, uploads: list[tuple[str, bytes]]) -> ImportBatch:
     if not uploads:
         raise ValueError("请至少选择一个 PDF 或 zip")
@@ -115,10 +153,21 @@ def run_import(db: Session, user: User, uploads: list[tuple[str, bytes]]) -> Imp
     pdfs = _expand_uploads(uploads)
     parsed_rows: list[tuple[ContractFile, ExtractedFields]] = []
     warnings: list[str] = []
+    touched_ids: list[int] = []
+    seen_hashes: dict[str, ContractFile] = {}
 
     for original_name, data in pdfs:
         if not original_name.lower().endswith(".pdf"):
             warnings.append(f"已跳过非 PDF：{original_name}")
+            continue
+        digest = _sha256(data)
+        existing_file = _find_existing_file(db, digest, seen_hashes)
+        if existing_file is not None:
+            warnings.append(
+                f"{original_name} 与已有附件「{existing_file.original_name}」内容相同，已跳过，避免重复记录。"
+            )
+            if existing_file.contract_id:
+                touched_ids.append(existing_file.contract_id)
             continue
         stored = _write_bytes(batch.id, original_name, data)
         parsed = parse_pdf_bytes(data)
@@ -127,6 +176,7 @@ def run_import(db: Session, user: User, uploads: list[tuple[str, bytes]]) -> Imp
             batch_id=batch.id,
             original_name=original_name[:255],
             stored_path=str(stored),
+            content_hash=digest,
             source=parsed.source,
             doc_type=fields.doc_type if fields.doc_type != "unknown" else "contract",
             parse_status="failed" if parsed.error and not parsed.text else "done",
@@ -135,6 +185,7 @@ def run_import(db: Session, user: User, uploads: list[tuple[str, bytes]]) -> Imp
         )
         db.add(row)
         db.flush()
+        seen_hashes[digest] = row
         parsed_rows.append((row, fields))
         warnings.extend(fields.warnings)
 
@@ -151,22 +202,25 @@ def run_import(db: Session, user: User, uploads: list[tuple[str, bytes]]) -> Imp
         if fields.doc_type == "invoice" and not fields.contract_no and not fields.party_a:
             invoice_only.append((row, fields))
             continue
-        key = grouping_key(fields.contract_no, row.id)
+        key = identity_key(fields, row.id)
         contract = contract_piles.get(key)
         if contract is None:
-            numbered = normalize_contract_no(fields.contract_no)
-            if numbered and numbered in existing:
-                contract = existing[numbered]
-                warnings.append(f"编号 {numbered} 已在库中，附件并入已有合同。")
+            found, reason = _find_existing_contract(db, fields, existing)
+            if found is not None:
+                contract = found
+                if reason:
+                    warnings.append(reason)
             else:
                 contract = _prepare_contract(fields, row.original_name, user.id, batch.id)
                 db.add(contract)
                 db.flush()
+                numbered = normalize_contract_no(fields.contract_no)
                 if numbered:
                     existing[numbered] = contract
             contract_piles[key] = contract
         row.contract_id = contract.id
         row.doc_type = "invoice" if fields.doc_type == "invoice" else "contract"
+        touched_ids.append(contract.id)
 
         for extracted in fields.invoices:
             _add_invoice_draft(db, user, contract, extracted.invoice_code, extracted.invoice_no, extracted.amount)
@@ -176,6 +230,8 @@ def run_import(db: Session, user: User, uploads: list[tuple[str, bytes]]) -> Imp
         target = contract_list[0] if len(contract_list) == 1 else None
         row.contract_id = target.id if target else None
         row.doc_type = "invoice"
+        if target:
+            touched_ids.append(target.id)
         for extracted in fields.invoices:
             _add_invoice_draft(db, user, target, extracted.invoice_code, extracted.invoice_no, extracted.amount, user_id=user.id)
 
@@ -201,6 +257,7 @@ def run_import(db: Session, user: User, uploads: list[tuple[str, bytes]]) -> Imp
             )
 
     batch.warning_text = "\n".join(dict.fromkeys(warnings)) or None
+    batch.affected_contract_ids = ",".join(str(item) for item in dict.fromkeys(touched_ids)) or None
     batch.status = "review"
     db.commit()
     db.refresh(batch)

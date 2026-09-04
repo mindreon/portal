@@ -10,6 +10,7 @@ from app.models.document import ContractFile, ImportBatch
 from app.models.user import User
 from app.modules.contracts import _to_out
 from app.schemas.contract import ContractOut, FileOut
+from app.services.file_serve import original_file_response
 from app.services.imports import run_import
 
 router = APIRouter(prefix="/contracts/imports", tags=["contract-imports"])
@@ -45,10 +46,16 @@ def download_file(
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
 ) -> FileResponse:
-    row = db.get(ContractFile, file_id)
-    if row is None:
-        raise HTTPException(status_code=404, detail="附件不存在")
-    return FileResponse(row.stored_path, filename=row.original_name, media_type="application/pdf")
+    return _file_response(db, file_id, inline=False)
+
+
+@router.get("/files/{file_id}/preview")
+def preview_file(
+    file_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> FileResponse:
+    return _file_response(db, file_id, inline=True)
 
 
 @router.get("/{batch_id}", response_model=ImportOut)
@@ -74,18 +81,36 @@ def confirm_import(
     return _batch_out(db, batch_id)
 
 
+def _file_response(db: Session, file_id: int, *, inline: bool) -> FileResponse:
+    row = db.get(ContractFile, file_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="附件不存在")
+    return original_file_response(row.stored_path, row.original_name, inline=inline)
+
+
+def _parse_ids(raw: str | None) -> list[int]:
+    if not raw:
+        return []
+    out: list[int] = []
+    for part in raw.split(","):
+        part = part.strip()
+        if part.isdigit():
+            out.append(int(part))
+    return out
+
+
 def _batch_out(db: Session, batch_id: int) -> ImportOut:
     from app.models.contract import Contract
 
     batch = db.get(ImportBatch, batch_id)
     if batch is None:
         raise HTTPException(status_code=404, detail="导入批次不存在")
-    contracts = db.scalars(
-        select(Contract)
-        .where(Contract.import_batch_id == batch_id)
-        .options(selectinload(Contract.invoices), selectinload(Contract.collections))
-        .order_by(Contract.id)
-    ).all()
+    affected = _parse_ids(batch.affected_contract_ids)
+    query = select(Contract).options(selectinload(Contract.invoices), selectinload(Contract.collections)).order_by(Contract.id)
+    if affected:
+        contracts = db.scalars(query.where(Contract.id.in_(affected))).all()
+    else:
+        contracts = db.scalars(query.where(Contract.import_batch_id == batch_id)).all()
     files = list(db.scalars(select(ContractFile).where(ContractFile.batch_id == batch_id)))
     return ImportOut(
         id=batch.id,

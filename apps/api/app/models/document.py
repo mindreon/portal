@@ -14,6 +14,8 @@ class ImportBatch(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     status: Mapped[str] = mapped_column(String(32), default="review")  # processing | review | confirmed
     warning_text: Mapped[str | None] = mapped_column(Text)
+    # 这次批次真正碰到的合同（含并入已有、内容重复跳过），逗号分隔 id
+    affected_contract_ids: Mapped[str | None] = mapped_column(Text)
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -31,6 +33,8 @@ class ContractFile(Base):
     contract_id: Mapped[int | None] = mapped_column(ForeignKey("contracts.id"))
     original_name: Mapped[str] = mapped_column(String(255))
     stored_path: Mapped[str] = mapped_column(String(512))
+    # SHA-256，用来拦住「同一份 PDF 又传一遍」
+    content_hash: Mapped[str | None] = mapped_column(String(64), unique=True, index=True)
     source: Mapped[str] = mapped_column(String(32), default="electronic")  # electronic | scanned
     doc_type: Mapped[str] = mapped_column(String(32), default="unknown")  # contract | invoice | unknown
     parse_status: Mapped[str] = mapped_column(String(32), default="pending")

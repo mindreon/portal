@@ -6,6 +6,7 @@ import { Suspense, useState } from "react";
 
 import { ContractEditor } from "../contract-editor";
 import { AppShell } from "@/components/app-shell";
+import { FilePreview } from "@/components/file-preview";
 import { FormError, PageHeader } from "@/components/ui";
 import { uploadFiles } from "@/lib/api";
 import type { ImportBatch } from "@/lib/types";
@@ -75,7 +76,12 @@ function NewContractForm() {
       {result ? (
         <section className="mt-8 space-y-3">
           <h3 className="heading-sm">识别结果</h3>
-          {result.warning_text ? <p className="text-body text-mid-gray">{result.warning_text}</p> : null}
+          {result.warning_text ? (
+            <p className="whitespace-pre-wrap text-body text-mid-gray">{result.warning_text}</p>
+          ) : null}
+          {result.contracts.length === 0 ? (
+            <p className="text-body text-mid-gray">没有新建合同。若提示内容相同，说明这份文件已经在库里。</p>
+          ) : null}
           {result.contracts.map((item) => (
             <Link key={item.id} href={`/contracts/${item.id}`} className="ui-card block p-5">
               <p className="eyebrow">{item.contract_no ?? "未编号"}</p>
@@ -85,6 +91,12 @@ function NewContractForm() {
               </p>
               <p className="mt-3 text-body font-medium text-ink">去核对 →</p>
             </Link>
+          ))}
+          {result.files.map((item) => (
+            <article key={item.id} className="ui-card p-5">
+              <p className="font-medium text-ink">{item.original_name}</p>
+              <FilePreview fileId={item.id} name={item.original_name} />
+            </article>
           ))}
         </section>
       ) : null}

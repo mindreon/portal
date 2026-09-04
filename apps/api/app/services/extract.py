@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 from dataclasses import dataclass, field
 from datetime import date
@@ -188,6 +189,31 @@ def grouping_key(contract_no: str | None, file_id: int) -> str:
     if normalized:
         return f"no:{normalized}"
     return f"file:{file_id}"
+
+
+def unnumbered_fingerprint(fields: ExtractedFields) -> str | None:
+    """
+    没编号时，用「甲方+乙方+金额+签订日」认同一份合同。
+    四项缺任何一项就返回 None，宁可拆开也不要误并。
+    """
+    if normalize_contract_no(fields.contract_no):
+        return None
+    if not fields.party_a or not fields.party_b or fields.amount is None or fields.signed_at is None:
+        return None
+    amount = fields.amount.quantize(Decimal("0.01"))
+    raw = f"{fields.party_a}|{fields.party_b}|{amount}|{fields.signed_at.isoformat()}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def identity_key(fields: ExtractedFields, file_id: int) -> str:
+    """入库分堆：编号优先，其次指纹，再不行就按文件拆开。"""
+    numbered = normalize_contract_no(fields.contract_no)
+    if numbered:
+        return f"no:{numbered}"
+    fingerprint = unnumbered_fingerprint(fields)
+    if fingerprint:
+        return f"fp:{fingerprint}"
+    return grouping_key(fields.contract_no, file_id)
 
 
 def derive_counterparty(party_a: str, party_b: str, our_role: str) -> str:
