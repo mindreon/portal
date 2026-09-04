@@ -44,12 +44,7 @@ docker compose down
 
 数据保存在项目目录下的 `data/postgres/` 和 `data/uploads/`，即使删除容器也不会丢失。清理数据前请先备份并删除对应目录。
 
-Caddy 与 Postgres 使用公司 Harbor 镜像（`harbor.mindreon.com/thirdparty/...`）。Caddy 2.10.2 可直接替换原来的 `caddy:2-alpine`。Postgres 从 16 升到 18 是**大版本**，旧的 `data/postgres` 不能原样挂上去：
-
-- **还没有正式数据**：删掉或改名 `data/postgres` 后重新 `docker compose up -d` 即可。
-- **已有 16 的数据**：先用旧镜像 `pg_dump` 导出，停掉容器，把目录改名为 `data/postgres-16.bak`，再启动 18，用 `psql` 导入。
-
-Postgres 18 官方镜像的数据路径也变了，compose 里挂的是 `/var/lib/postgresql`，不是旧的 `/var/lib/postgresql/data`。详见 [Docker Hub postgres 说明](https://hub.docker.com/_/postgres)。
+Caddy、Postgres、Node、uv 都走公司 Harbor 镜像。当前没有旧库数据，直接 `docker compose up -d --build` 即可。Postgres 18 要把目录挂到 `/var/lib/postgresql`（不是 16 用的 `/var/lib/postgresql/data`）。
 
 ## GitHub Actions 自动部署
 
