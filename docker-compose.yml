@@ -11,14 +11,15 @@
 
 services:
   db:
-    image: postgres:16-alpine
+    image: harbor.mindreon.com/thirdparty/postgres:18.1
     environment:
       POSTGRES_USER: portal
       POSTGRES_PASSWORD: portal
       POSTGRES_DB: portal
     volumes:
-      # 数据保存在 compose 文件所在目录，避免依赖 Docker named volume
-      - ./data/postgres:/var/lib/postgresql/data
+      # Postgres 18 官方镜像把数据目录改成了 /var/lib/postgresql/<主版本>/docker
+      # 要挂父目录，不能再挂 /var/lib/postgresql/data（那是 17 及更早的路径）
+      - ./data/postgres:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U portal -d portal"]
       interval: 5s
@@ -59,7 +60,7 @@ services:
       - "3000"
 
   proxy:
-    image: caddy:2-alpine
+    image: harbor.mindreon.com/thirdparty/caddy:2.10.2-alpine
     ports:
       # 宿主机端口可通过 .env 中的 CADDY_HTTP_PORT 自定义，容器内仍监听 80
       - "${CADDY_HTTP_PORT:-80}:80"
