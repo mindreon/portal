@@ -4,6 +4,7 @@ FROM harbor.mindreon.com/ops/astral/uv:python3.12-alpine
 WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
+    UV_DEFAULT_INDEX=https://mirrors.aliyun.com/pypi/simple \
     PYTHONUNBUFFERED=1
 
 COPY pyproject.toml uv.lock ./

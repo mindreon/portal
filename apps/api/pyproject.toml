@@ -27,6 +27,12 @@ dev = [
 [tool.uv]
 package = false
 
+# 默认走阿里云 PyPI 镜像，国内 docker compose / 本机 uv sync 不用绕到 pypi.org。
+[[tool.uv.index]]
+name = "aliyun"
+url = "https://mirrors.aliyun.com/pypi/simple"
+default = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
