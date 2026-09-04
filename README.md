@@ -55,7 +55,7 @@ Caddy、Postgres、Node、uv 都走公司 Harbor 镜像。当前没有旧库数�
 
 ## GitHub Actions 自动部署
 
-`.github/workflows/ci.yml` 会检查前后端代码；只有 CI 成功后，`.github/workflows/deploy.yml` 才会通过 SSH 部署到阿里云服务器的 `/src/portal`，并重新构建和启动 Docker Compose。
+`.github/workflows/ci.yml` 会在 **Pull Request** 以及 **push 到 `main`** 时检查前后端代码。只有 `main` 上的 **push** 让 CI 成功之后，`.github/workflows/deploy.yml` 才会通过 SSH 部署到阿里云服务器的 `/srv/portal`，并重新构建和启动 Docker Compose。功能分支和 PR 的 CI 不会触发部署。
 
 在仓库 Settings → Secrets and variables → Actions 中配置：
 
@@ -64,7 +64,7 @@ Caddy、Postgres、Node、uv 都走公司 Harbor 镜像。当前没有旧库数�
 - `ALIYUN_SSH_KEY`：对应用户的私钥（完整内容）
 - `ALIYUN_PORT`：SSH 端口，可选，默认 `22`
 
-服务器需提前在 `/src/portal` 克隆本仓库，并确保该目录下已有生产环境 `.env` 文件。
+服务器需提前在 `/srv/portal` 克隆本仓库，并确保该目录下已有生产环境 `.env` 文件。
 
 ## 配置飞书登录
 
