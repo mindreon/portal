@@ -32,4 +32,6 @@ apps/web/.turbo/
 *.log
 postgres_data/
 caddy_data/
+data/postgres/
+data/uploads/
 caddy_config/

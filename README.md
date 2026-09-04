@@ -42,7 +42,20 @@ docker compose up -d --build
 docker compose down
 ```
 
-数据在 Docker volume `postgres_data` 里，`down` 不会删库。要连库一起清掉用 `docker compose down -v`。
+数据保存在项目目录下的 `data/postgres/` 和 `data/uploads/`，即使删除容器也不会丢失。清理数据前请先备份并删除对应目录。
+
+## GitHub Actions 自动部署
+
+`.github/workflows/ci.yml` 会检查前后端代码；只有 CI 成功后，`.github/workflows/deploy.yml` 才会通过 SSH 部署到阿里云服务器的 `/src/portal`，并重新构建和启动 Docker Compose。
+
+在仓库 Settings → Secrets and variables → Actions 中配置：
+
+- `ALIYUN_HOST`：服务器公网 IP 或域名
+- `ALIYUN_USER`：SSH 用户名
+- `ALIYUN_SSH_KEY`：对应用户的私钥（完整内容）
+- `ALIYUN_PORT`：SSH 端口，可选，默认 `22`
+
+服务器需提前在 `/src/portal` 克隆本仓库，并确保该目录下已有生产环境 `.env` 文件。
 
 ## 配置飞书登录
 
