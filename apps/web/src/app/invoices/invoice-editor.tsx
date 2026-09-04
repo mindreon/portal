@@ -10,6 +10,7 @@ import { INVOICE_STATUS_LABEL, type Contract, type Invoice } from "@/lib/types";
 
 const EMPTY = {
   title: "",
+  invoice_code: "",
   invoice_no: "",
   counterparty: "",
   amount: "0",
@@ -22,9 +23,15 @@ const EMPTY = {
   contract_id: "",
 };
 
-export function InvoiceEditor({ invoiceId }: { invoiceId?: number }) {
+export function InvoiceEditor({
+  invoiceId,
+  defaultContractId,
+}: {
+  invoiceId?: number;
+  defaultContractId?: string;
+}) {
   const router = useRouter();
-  const [form, setForm] = useState(EMPTY);
+  const [form, setForm] = useState({ ...EMPTY, contract_id: defaultContractId ?? "" });
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -35,6 +42,7 @@ export function InvoiceEditor({ invoiceId }: { invoiceId?: number }) {
     api<Invoice>(`/api/v1/invoices/${invoiceId}`).then((item) => {
       setForm({
         title: item.title,
+        invoice_code: item.invoice_code ?? "",
         invoice_no: item.invoice_no,
         counterparty: item.counterparty,
         amount: item.amount,
@@ -59,6 +67,7 @@ export function InvoiceEditor({ invoiceId }: { invoiceId?: number }) {
     setError("");
     const payload = {
       ...form,
+      invoice_code: form.invoice_code || null,
       issued_at: form.issued_at || null,
       due_at: form.due_at || null,
       notes: form.notes || null,
@@ -96,13 +105,16 @@ export function InvoiceEditor({ invoiceId }: { invoiceId?: number }) {
           <input required value={form.title} onChange={(e) => update("title", e.target.value)} className="ui-input" />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="发票编号">
+          <Field label="发票代码（可空）">
+            <input value={form.invoice_code} onChange={(e) => update("invoice_code", e.target.value)} className="ui-input" />
+          </Field>
+          <Field label="发票号码">
             <input required value={form.invoice_no} onChange={(e) => update("invoice_no", e.target.value)} className="ui-input" />
           </Field>
-          <Field label="对方名称">
-            <input required value={form.counterparty} onChange={(e) => update("counterparty", e.target.value)} className="ui-input" />
-          </Field>
         </div>
+        <Field label="对方名称">
+          <input required value={form.counterparty} onChange={(e) => update("counterparty", e.target.value)} className="ui-input" />
+        </Field>
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="金额">
             <input required type="number" step="0.01" min="0" value={form.amount} onChange={(e) => update("amount", e.target.value)} className="ui-input" />

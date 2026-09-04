@@ -33,6 +33,9 @@ services:
     environment:
       # 容器之间用服务名通信，不要用 localhost
       DATABASE_URL: postgresql+psycopg://portal:portal@db:5432/portal
+      UPLOAD_DIR: /app/data/uploads
+    volumes:
+      - api_uploads:/app/data/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -66,3 +69,4 @@ services:
 
 volumes:
   postgres_data:
+  api_uploads:

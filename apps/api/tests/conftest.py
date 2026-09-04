@@ -11,7 +11,7 @@ os.environ.setdefault("DATABASE_URL", "sqlite://")
 os.environ.setdefault("SECRET_KEY", "test-secret-key-at-least-32-bytes-long")
 os.environ.setdefault("AUTH_ALLOW_DEV_LOGIN", "true")
 os.environ.setdefault("FEISHU_APP_ID", "")
-os.environ.setdefault("FEISHU_APP_SECRET", "")
+os.environ.setdefault("UPLOAD_DIR", "/tmp/portal-test-uploads")
 
 from collections.abc import Generator
 

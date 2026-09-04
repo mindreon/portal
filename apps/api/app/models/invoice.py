@@ -14,6 +14,7 @@ class Invoice(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(String(255))
+    invoice_code: Mapped[str | None] = mapped_column(String(32))
     invoice_no: Mapped[str] = mapped_column(String(64), unique=True)
     counterparty: Mapped[str] = mapped_column(String(255))
     amount: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=0)
@@ -24,6 +25,7 @@ class Invoice(Base):
     due_at: Mapped[date | None] = mapped_column(Date)
     notes: Mapped[str | None] = mapped_column(Text)
     contract_id: Mapped[int | None] = mapped_column(ForeignKey("contracts.id"))
+    schedule_id: Mapped[int | None] = mapped_column(ForeignKey("payment_schedules.id"))
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -32,3 +34,4 @@ class Invoice(Base):
 
     owner: Mapped["User"] = relationship(back_populates="invoices")  # noqa: F821
     contract: Mapped["Contract | None"] = relationship(back_populates="invoices")  # noqa: F821
+    schedule: Mapped["PaymentSchedule | None"] = relationship(back_populates="invoices")  # noqa: F821

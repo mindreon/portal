@@ -9,6 +9,7 @@ INVOICE_STATUSES = ("draft", "issued", "paid", "void")
 
 class InvoiceIn(BaseModel):
     title: str = Field(min_length=1, max_length=255)
+    invoice_code: str | None = Field(default=None, max_length=32)
     invoice_no: str = Field(min_length=1, max_length=64)
     counterparty: str = Field(min_length=1, max_length=255)
     amount: Decimal = Field(default=Decimal("0"), ge=0)
@@ -19,6 +20,7 @@ class InvoiceIn(BaseModel):
     due_at: date | None = None
     notes: str | None = None
     contract_id: int | None = None
+    schedule_id: int | None = None
 
 
 class InvoiceOut(InvoiceIn):
