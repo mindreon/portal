@@ -22,7 +22,7 @@ jobs:
           script_stop: true
           script: |
             set -eu
-            cd /src/portal
+            cd /srv/portal
             git checkout main
             git pull --ff-only origin main
             docker compose up -d --build --remove-orphans
