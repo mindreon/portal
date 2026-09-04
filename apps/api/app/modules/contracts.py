@@ -1,10 +1,9 @@
+from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
-from decimal import Decimal
-
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
@@ -20,8 +19,10 @@ from app.schemas.contract import (
     OUR_ROLES,
     CollectionIn,
     CollectionOut,
+    CollectionRow,
     ContractIn,
     ContractOut,
+    ContractSummary,
     FileOut,
     ScheduleIn,
     ScheduleOut,
@@ -77,15 +78,83 @@ def _apply(contract: Contract, payload: ContractIn) -> None:
 
 @router.get("", response_model=list[ContractOut])
 def list_contracts(
+    party: str | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
 ) -> list[ContractOut]:
-    rows = db.scalars(
-        select(Contract)
-        .options(selectinload(Contract.invoices), selectinload(Contract.collections))
-        .order_by(Contract.id.desc())
-    ).all()
+    query = select(Contract).options(selectinload(Contract.invoices), selectinload(Contract.collections))
+    if party and party.strip():
+        needle = f"%{party.strip().lower()}%"
+        query = query.where(
+            or_(
+                func.lower(Contract.party_a).like(needle),
+                func.lower(Contract.party_b).like(needle),
+                func.lower(Contract.counterparty).like(needle),
+                func.lower(Contract.title).like(needle),
+            )
+        )
+    effective = func.coalesce(Contract.signed_at, Contract.start_date)
+    if date_from is not None:
+        query = query.where(effective >= date_from)
+    if date_to is not None:
+        query = query.where(effective <= date_to)
+    rows = db.scalars(query.order_by(Contract.id.desc())).all()
     return [_to_out(item) for item in rows]
+
+
+@router.get("/summary", response_model=ContractSummary)
+def contract_summary(
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> ContractSummary:
+    rows = db.scalars(
+        select(Contract).options(selectinload(Contract.invoices), selectinload(Contract.collections))
+    ).all()
+    total = sum((item.amount or Decimal("0") for item in rows), Decimal("0"))
+    collected = sum(
+        (sum((c.amount or Decimal("0") for c in item.collections), Decimal("0")) for item in rows),
+        Decimal("0"),
+    )
+    return ContractSummary(
+        count=len(rows),
+        active_count=len([item for item in rows if item.status == "active"]),
+        total_amount=total,
+        collected_amount=collected,
+        outstanding_amount=total - collected,
+    )
+
+
+@router.get("/payments", response_model=list[CollectionRow])
+def list_all_payments(
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> list[CollectionRow]:
+    rows = db.scalars(
+        select(Collection)
+        .options(selectinload(Collection.contract), selectinload(Collection.schedule))
+        .order_by(Collection.received_at.desc(), Collection.id.desc())
+    ).all()
+    result: list[CollectionRow] = []
+    for item in rows:
+        contract = item.contract
+        result.append(
+            CollectionRow(
+                id=item.id,
+                amount=item.amount,
+                received_at=item.received_at,
+                notes=item.notes,
+                schedule_id=item.schedule_id,
+                contract_id=item.contract_id,
+                contract_title=contract.title if contract else "",
+                contract_no=contract.contract_no if contract else None,
+                party_a=contract.party_a if contract else "",
+                party_b=contract.party_b if contract else "",
+                schedule_name=item.schedule.name if item.schedule else None,
+            )
+        )
+    return result
 
 
 @router.post("", response_model=ContractOut, status_code=201)

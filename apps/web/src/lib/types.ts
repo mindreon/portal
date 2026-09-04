@@ -88,6 +88,22 @@ export type ImportBatch = {
   files: ContractFile[];
 };
 
+export type ContractSummary = {
+  count: number;
+  active_count: number;
+  total_amount: string;
+  collected_amount: string;
+  outstanding_amount: string;
+};
+
+export type CollectionRow = Collection & {
+  contract_title: string;
+  contract_no: string | null;
+  party_a: string;
+  party_b: string;
+  schedule_name: string | null;
+};
+
 export const CONTRACT_STATUS_LABEL: Record<string, string> = {
   draft: "草稿",
   active: "履约中",

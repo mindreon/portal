@@ -28,8 +28,7 @@ export const MODULES: BusinessModule[] = [
     summary: "立约、履约、归档。和发票分开走。",
     features: [
       { href: "/contracts", label: "全部合同" },
-      { href: "/contracts/import", label: "上传解析" },
-      { href: "/contracts/new", label: "手工新建" },
+      { href: "/contracts/payments", label: "回款" },
     ],
   },
   {
@@ -62,8 +61,8 @@ export function isFeatureActive(pathname: string, feature: ModuleFeature, siblin
 export function featureLabel(pathname: string, module: BusinessModule) {
   const exact = module.features.find((item) => pathname === item.href);
   if (exact) return exact.label;
-  if (pathname.includes("/import")) return "上传解析";
-  if (pathname.endsWith("/new")) return "新建";
+  if (pathname.includes("/payments")) return "回款";
+  if (pathname.includes("/import") || pathname.endsWith("/new")) return "新建合同";
   return "详情";
 }
 

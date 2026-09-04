@@ -19,9 +19,15 @@ import {
 
 type Tab = "fields" | "files" | "invoices" | "payments";
 
-export function ContractWorkspace({ contractId }: { contractId: number }) {
+export function ContractWorkspace({
+  contractId,
+  initialTab = "fields",
+}: {
+  contractId: number;
+  initialTab?: Tab;
+}) {
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>("fields");
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [contract, setContract] = useState<Contract | null>(null);
   const [files, setFiles] = useState<ContractFile[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);

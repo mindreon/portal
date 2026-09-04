@@ -106,3 +106,15 @@ def test_collection_and_schedule(logged_in: TestClient) -> None:
     assert paid.status_code == 201
     detail = logged_in.get(f"/api/v1/contracts/{contract_id}")
     assert detail.json()["collected_amount"] == "40.00"
+
+    summary = logged_in.get("/api/v1/contracts/summary")
+    assert summary.status_code == 200
+    assert summary.json()["count"] >= 1
+    payments = logged_in.get("/api/v1/contracts/payments")
+    assert payments.status_code == 200
+    assert payments.json()[0]["contract_no"] == "HT-PAY"
+    filtered = logged_in.get("/api/v1/contracts", params={"party": "客户"})
+    assert filtered.status_code == 200
+    assert any(item["contract_no"] == "HT-PAY" for item in filtered.json())
+    miss = logged_in.get("/api/v1/contracts", params={"party": "不存在的主体"})
+    assert miss.json() == []

@@ -85,3 +85,19 @@ class CollectionOut(CollectionIn):
     contract_id: int
 
     model_config = {"from_attributes": True}
+
+
+class ContractSummary(BaseModel):
+    count: int
+    active_count: int
+    total_amount: Decimal
+    collected_amount: Decimal
+    outstanding_amount: Decimal
+
+
+class CollectionRow(CollectionOut):
+    contract_title: str
+    contract_no: str | None = None
+    party_a: str = ""
+    party_b: str = ""
+    schedule_name: str | None = None

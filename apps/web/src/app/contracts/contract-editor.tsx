@@ -24,7 +24,13 @@ const EMPTY = {
   notes: "",
 };
 
-export function ContractEditor({ contractId }: { contractId?: number }) {
+export function ContractEditor({
+  contractId,
+  onSwitchToUpload,
+}: {
+  contractId?: number;
+  onSwitchToUpload?: () => void;
+}) {
   const router = useRouter();
   const [form, setForm] = useState(EMPTY);
   const [error, setError] = useState("");
@@ -158,6 +164,11 @@ export function ContractEditor({ contractId }: { contractId?: number }) {
           <button type="submit" disabled={busy} className="ui-btn ui-btn-primary">
             保存
           </button>
+          {onSwitchToUpload ? (
+            <button type="button" onClick={onSwitchToUpload} className="ui-btn ui-btn-secondary">
+              改用上传 PDF
+            </button>
+          ) : null}
           {contractId ? (
             <button type="button" onClick={onDelete} className="ui-btn ui-btn-danger">
               删除
