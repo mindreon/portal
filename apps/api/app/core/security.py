@@ -6,7 +6,7 @@
 - 我们自己签发短期 JWT，业务接口只认自己的用户 id。
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import jwt
 
@@ -19,7 +19,7 @@ class TokenError(Exception):
 
 def create_session_token(user_id: int) -> str:
     settings = get_settings()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload = {
         "sub": str(user_id),
         "iat": int(now.timestamp()),

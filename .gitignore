@@ -21,6 +21,7 @@ node_modules/
 .next/
 out/
 apps/web/.turbo/
+*.tsbuildinfo
 
 # 编辑器与系统
 .DS_Store

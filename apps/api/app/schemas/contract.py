@@ -3,7 +3,6 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field, field_validator
 
-
 CONTRACT_STATUSES = ("draft", "active", "expired", "terminated")
 OUR_ROLES = ("", "party_a", "party_b")
 

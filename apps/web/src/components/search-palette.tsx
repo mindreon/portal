@@ -9,8 +9,8 @@ import type { Contract, Invoice } from "@/lib/types";
 
 type Hit = { href: string; title: string; meta: string };
 
-function match(query: string, text: string) {
-  return text.toLowerCase().includes(query.toLowerCase());
+function match(query: string, text: string | null | undefined) {
+  return (text ?? "").toLowerCase().includes(query.toLowerCase());
 }
 
 export function SearchPalette() {

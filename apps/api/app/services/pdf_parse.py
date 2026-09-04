@@ -9,7 +9,6 @@ from io import BytesIO
 
 from pypdf import PdfReader
 
-
 SCAN_TEXT_THRESHOLD = 80
 
 

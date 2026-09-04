@@ -59,7 +59,7 @@ jobs:
         run: uv sync --frozen --all-extras
 
       - name: Lint
-        run: uvx ruff check .
+        run: uv run ruff check app tests
 
       - name: Compile check
         run: uv run python -m compileall -q app
