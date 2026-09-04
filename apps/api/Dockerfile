@@ -1,5 +1,5 @@
-# 用官方 uv 镜像安装依赖，最终镜像只留运行所需文件
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+# 用公司 Harbor 的 uv Alpine 镜像安装依赖，最终只留运行所需文件
+FROM harbor.mindreon.com/ops/astral/uv:python3.12-alpine
 
 WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1 \
@@ -7,9 +7,7 @@ ENV UV_COMPILE_BYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 COPY pyproject.toml uv.lock ./
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-chi-sim \
-    && rm -rf /var/lib/apt/lists/* \
+RUN apk add --no-cache tesseract-ocr tesseract-ocr-data-chi_sim \
     && uv sync --frozen --no-dev
 
 COPY app ./app
