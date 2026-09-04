@@ -4,17 +4,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { api } from "@/lib/api";
+import { searchShortcuts } from "@/lib/modules";
 import type { Contract, Invoice } from "@/lib/types";
 
 type Hit = { href: string; title: string; meta: string };
-
-const SHORTCUTS: Hit[] = [
-  { href: "/", title: "总览", meta: "工作台" },
-  { href: "/contracts", title: "合同", meta: "独立模块" },
-  { href: "/contracts/new", title: "新建合同", meta: "合同" },
-  { href: "/invoices", title: "发票", meta: "独立模块" },
-  { href: "/invoices/new", title: "新建发票", meta: "发票" },
-];
 
 function match(query: string, text: string) {
   return text.toLowerCase().includes(query.toLowerCase());
@@ -54,7 +47,8 @@ export function SearchPalette() {
 
   const hits = useMemo(() => {
     const q = query.trim();
-    const pages = q ? SHORTCUTS.filter((item) => match(q, item.title) || match(q, item.meta)) : SHORTCUTS;
+    const shortcuts = searchShortcuts();
+    const pages = q ? shortcuts.filter((item) => match(q, item.title) || match(q, item.meta)) : shortcuts;
     const contractHits = contracts
       .filter((item) => !q || match(q, item.title) || match(q, item.contract_no) || match(q, item.counterparty))
       .slice(0, 6)
@@ -82,7 +76,7 @@ export function SearchPalette() {
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} className="search-trigger">
-        <span>搜索合同或发票…</span>
+        <span>搜索模块或记录…</span>
         <kbd>⌘K</kbd>
       </button>
 
