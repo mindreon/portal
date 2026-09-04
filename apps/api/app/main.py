@@ -14,14 +14,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+# 导入模型，确保 Base.metadata 里有所有表
+from app import models as _models  # noqa: F401
 from app.core.config import get_settings
 from app.db.base import Base
 from app.db.session import engine
 from app.db.sqlite_patch import ensure_sqlite_columns
 from app.modules import auth, contracts, imports, invoices
-
-# 导入模型，确保 Base.metadata 里有所有表
-from app import models as _models  # noqa: F401
 
 
 @asynccontextmanager

@@ -13,7 +13,6 @@ from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
-
 CONTRACT_NO_RE = re.compile(
     r"(?:合同编号|合同号|合同編號|Contract\s*No\.?)\s*[:：#]?\s*([A-Za-z0-9][A-Za-z0-9\-_/]{2,31})",
     re.I,

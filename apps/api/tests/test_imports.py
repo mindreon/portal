@@ -79,7 +79,7 @@ def test_zip_upload(logged_in: TestClient, monkeypatch) -> None:
     monkeypatch.setattr("app.services.imports.parse_pdf_bytes", fake_parse)
     buffer = BytesIO()
     with ZipFile(buffer, "w") as archive:
-        archive.writestr("inner.pdf", "合同编号：HT-ZIP-1 甲方：AAA 乙方：BBB".encode("utf-8"))
+        archive.writestr("inner.pdf", "合同编号：HT-ZIP-1 甲方：AAA 乙方：BBB".encode())
     response = logged_in.post(
         "/api/v1/contracts/imports",
         files=[("files", ("pack.zip", buffer.getvalue(), "application/zip"))],
@@ -173,11 +173,11 @@ def test_unnumbered_fingerprint_merges_different_scans(logged_in: TestClient, mo
     monkeypatch.setattr("app.services.imports.parse_pdf_bytes", fake_parse)
     first = logged_in.post(
         "/api/v1/contracts/imports",
-        files=[("files", ("scan-a.pdf", f"{base}\n正本".encode("utf-8"), "application/pdf"))],
+        files=[("files", ("scan-a.pdf", f"{base}\n正本".encode(), "application/pdf"))],
     )
     second = logged_in.post(
         "/api/v1/contracts/imports",
-        files=[("files", ("scan-b.pdf", f"{base}\n副本扫描".encode("utf-8"), "application/pdf"))],
+        files=[("files", ("scan-b.pdf", f"{base}\n副本扫描".encode(), "application/pdf"))],
     )
     assert first.status_code == 201, first.text
     assert second.status_code == 201, second.text
@@ -194,7 +194,7 @@ def test_preview_is_inline_and_download_is_attachment(logged_in: TestClient, mon
     monkeypatch.setattr("app.services.imports.parse_pdf_bytes", fake_parse)
     created = logged_in.post(
         "/api/v1/contracts/imports",
-        files=[("files", ("preview.pdf", "甲方：甲\n乙方：乙".encode("utf-8"), "application/pdf"))],
+        files=[("files", ("preview.pdf", "甲方：甲\n乙方：乙".encode(), "application/pdf"))],
     )
     file_id = created.json()["files"][0]["id"]
     preview = logged_in.get(f"/api/v1/contracts/imports/files/{file_id}/preview")
