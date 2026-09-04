@@ -4,7 +4,7 @@ from zipfile import ZipFile
 
 from fastapi.testclient import TestClient
 
-from app.services.extract import extract_fields, grouping_key, normalize_contract_no
+from app.services.extract import extract_fields, grouping_key, identity_key, normalize_contract_no
 from app.services.pdf_parse import ParsedPdf
 
 
@@ -24,6 +24,7 @@ def test_extract_without_contract_no() -> None:
     assert fields.party_b == "本地运营主体"
     assert fields.amount == Decimal("120000.00")
     assert grouping_key(fields.contract_no, 9) == "file:9"
+    assert identity_key(fields, 9).startswith("fp:")
     assert normalize_contract_no("") is None
     assert "未编号" in fields.title or fields.warnings
 
@@ -118,3 +119,88 @@ def test_collection_and_schedule(logged_in: TestClient) -> None:
     assert any(item["contract_no"] == "HT-PAY" for item in filtered.json())
     miss = logged_in.get("/api/v1/contracts", params={"party": "不存在的主体"})
     assert miss.json() == []
+
+
+def test_duplicate_bytes_do_not_create_second_contract(logged_in: TestClient, monkeypatch) -> None:
+    payload = "甲方：星河科技有限公司\n乙方：本地运营主体\n合同总金额（元）：120000.00\n合同签订时间：2026年1月1日"
+
+    def fake_parse(data: bytes) -> ParsedPdf:
+        return ParsedPdf(text=data.decode("utf-8"), source="electronic")
+
+    monkeypatch.setattr("app.services.imports.parse_pdf_bytes", fake_parse)
+    files = [("files", ("same.pdf", payload.encode("utf-8"), "application/pdf"))]
+    first = logged_in.post("/api/v1/contracts/imports", files=files)
+    second = logged_in.post("/api/v1/contracts/imports", files=files)
+    assert first.status_code == 201, first.text
+    assert second.status_code == 201, second.text
+    assert len(first.json()["contracts"]) == 1
+    assert len(first.json()["files"]) == 1
+    assert len(second.json()["files"]) == 0
+    assert second.json()["contracts"][0]["id"] == first.json()["contracts"][0]["id"]
+    assert "内容相同" in (second.json()["warning_text"] or "")
+    listing = logged_in.get("/api/v1/contracts")
+    matches = [item for item in listing.json() if item["party_a"] == "星河科技有限公司"]
+    assert len(matches) == 1
+
+
+def test_same_batch_duplicate_bytes_kept_once(logged_in: TestClient, monkeypatch) -> None:
+    payload = "甲方：甲公司\n乙方：乙公司\n合同总金额（元）：10\n合同签订时间：2026年2月2日"
+
+    def fake_parse(data: bytes) -> ParsedPdf:
+        return ParsedPdf(text=data.decode("utf-8"), source="electronic")
+
+    monkeypatch.setattr("app.services.imports.parse_pdf_bytes", fake_parse)
+    blob = payload.encode("utf-8")
+    response = logged_in.post(
+        "/api/v1/contracts/imports",
+        files=[
+            ("files", ("one.pdf", blob, "application/pdf")),
+            ("files", ("copy.pdf", blob, "application/pdf")),
+        ],
+    )
+    assert response.status_code == 201, response.text
+    assert len(response.json()["contracts"]) == 1
+    assert len(response.json()["files"]) == 1
+    assert "内容相同" in (response.json()["warning_text"] or "")
+
+
+def test_unnumbered_fingerprint_merges_different_scans(logged_in: TestClient, monkeypatch) -> None:
+    base = "甲方：甲公司\n乙方：乙公司\n合同总金额（元）：88.00\n合同签订时间：2026年3月3日"
+
+    def fake_parse(data: bytes) -> ParsedPdf:
+        return ParsedPdf(text=data.decode("utf-8"), source="electronic")
+
+    monkeypatch.setattr("app.services.imports.parse_pdf_bytes", fake_parse)
+    first = logged_in.post(
+        "/api/v1/contracts/imports",
+        files=[("files", ("scan-a.pdf", f"{base}\n正本".encode("utf-8"), "application/pdf"))],
+    )
+    second = logged_in.post(
+        "/api/v1/contracts/imports",
+        files=[("files", ("scan-b.pdf", f"{base}\n副本扫描".encode("utf-8"), "application/pdf"))],
+    )
+    assert first.status_code == 201, first.text
+    assert second.status_code == 201, second.text
+    assert second.json()["contracts"][0]["id"] == first.json()["contracts"][0]["id"]
+    assert "已并入" in (second.json()["warning_text"] or "")
+    files = logged_in.get(f"/api/v1/contracts/{first.json()['contracts'][0]['id']}/files")
+    assert len(files.json()) == 2
+
+
+def test_preview_is_inline_and_download_is_attachment(logged_in: TestClient, monkeypatch) -> None:
+    def fake_parse(data: bytes) -> ParsedPdf:
+        return ParsedPdf(text=data.decode("utf-8"), source="electronic")
+
+    monkeypatch.setattr("app.services.imports.parse_pdf_bytes", fake_parse)
+    created = logged_in.post(
+        "/api/v1/contracts/imports",
+        files=[("files", ("preview.pdf", "甲方：甲\n乙方：乙".encode("utf-8"), "application/pdf"))],
+    )
+    file_id = created.json()["files"][0]["id"]
+    preview = logged_in.get(f"/api/v1/contracts/imports/files/{file_id}/preview")
+    download = logged_in.get(f"/api/v1/contracts/imports/files/{file_id}/download")
+    assert preview.status_code == 200
+    assert download.status_code == 200
+    assert preview.headers["content-type"].startswith("application/pdf")
+    assert "inline" in preview.headers["content-disposition"]
+    assert "attachment" in download.headers["content-disposition"]

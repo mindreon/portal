@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
+import { FilePreview } from "@/components/file-preview";
 import { Field, FormError, PageHeader } from "@/components/ui";
 import { api, money } from "@/lib/api";
 import {
@@ -260,17 +261,15 @@ export function ContractWorkspace({
                 {item.source === "scanned" ? "扫描件" : "电子 PDF"} · {item.doc_type} · {item.parse_status}
               </p>
               {item.error_message ? <p className="mt-2 text-body text-ember">{item.error_message}</p> : null}
+              <FilePreview fileId={item.id} name={item.original_name} />
               {item.extracted_text ? (
-                <pre className="mt-3 max-h-48 overflow-auto whitespace-pre-wrap text-body text-mid-gray">
-                  {item.extracted_text}
-                </pre>
+                <details className="mt-3">
+                  <summary className="cursor-pointer text-body font-medium text-ink">识别出的文字</summary>
+                  <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap text-body text-mid-gray">
+                    {item.extracted_text}
+                  </pre>
+                </details>
               ) : null}
-              <a
-                href={`/api/v1/contracts/imports/files/${item.id}/download`}
-                className="mt-3 inline-block text-body font-medium underline-offset-4 hover:underline"
-              >
-                下载原件
-              </a>
             </article>
           ))}
         </div>
