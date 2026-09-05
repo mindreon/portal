@@ -177,9 +177,19 @@ def test_reject_company_and_generic_subject_names() -> None:
     assert upgraded.subject_name == goods
 
 
+def test_main_subject_is_not_overwritten_by_attachment_item_list() -> None:
+    merged, added = merge_extracted_fields(
+        fields_from_llm_payload({"subject_name": "AI 调度软件"}),
+        fields_from_llm_payload(
+            {"subject_name": "AI 调度软件、配套智能知识库工作流系统、配套智算资源调度监控系统"}
+        ),
+    )
+    assert added is False
+    assert merged.subject_name == "AI 调度软件"
+
+
 def test_derive_our_role_from_maineng_name() -> None:
     assert derive_our_role("医大一", "深圳市迈能同行科技有限公司") == "party_b"
     assert derive_our_role("迈能同行科技有限公司", "某医院") == "party_a"
     assert derive_our_role("医大一", "时序天成") == ""
     assert still_needed_from_payload({"still_needed": ["subject_name"]}) == ["subject_name"]
-

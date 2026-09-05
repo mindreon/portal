@@ -174,9 +174,13 @@ def normalize_subject_name(
 
 
 def _subject_more_specific(incoming: str, current: str) -> bool:
-    """清单更长、分项更多，视为更像合同标的页，而不是封面四个字。"""
-    if incoming.count("、") > current.count("、"):
-        return True
+    """只有单个、更完整的名称才可替换已识别的采购物。"""
+    # 附件功能/价格清单常把主标的和配套项串成一长串；这不是对主标的
+    # 更精确的修正。已有可用名称时，保留它，避免后读的附件覆盖正文采购物。
+    if any(separator in incoming for separator in ("、", ",", "，", "/", "／")):
+        return False
+    if _compact_subject(current) and _compact_subject(current) in _compact_subject(incoming):
+        return False
     return len(_compact_subject(incoming)) >= len(_compact_subject(current)) + 6
 
 

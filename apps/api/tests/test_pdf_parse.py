@@ -344,6 +344,7 @@ def test_understand_request_uses_37_and_disables_thinking(monkeypatch) -> None:
     assert "不要编造" in prompt
     assert "still_needed" in prompt
     assert "合同标的" in prompt
+    assert "不要把多个配套项" in prompt
     assert "北京时序天成技术有限公司" in prompt
     monkeypatch.setenv("QWEN_API_KEY", "")
     get_settings.cache_clear()
