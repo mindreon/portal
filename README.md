@@ -44,11 +44,11 @@ docker compose down
 
 数据保存在项目目录下的 `data/postgres/` 和 `data/uploads/`，即使删除容器也不会丢失。清理数据前请先备份并删除对应目录。
 
-合同文本处理尽量少花 token：电子 PDF 本地抽字；本地已经够填草稿（编号、甲乙方、金额）就不上模型。几乎没字的扫描件才按页调用百炼 `qwen3.5-ocr`，只抄要素行，封面齐了就停。在 `.env` 里同时填：
+合同上传后会一页一页交给通义千问理解（默认 `qwen3.7-plus`），抽取编号、甲乙方、金额、日期、付款比例等草稿要素；信息齐了就停止翻页，不会用正则去匹配正文。电子页只发该页文本，扫描页才发缩小后的图。在 `.env` 里同时填：
 
 - `QWEN_API_KEY`：百炼 API Key
 - `QWEN_BASE_URL`：`https://dashscope.aliyuncs.com/compatible-mode/v1`（北京；新加坡用 `https://dashscope-intl.aliyuncs.com/compatible-mode/v1`）
-- `QWEN_OCR_MODEL`：默认 `qwen3.5-ocr`。若要改回通用多模态，可写成 `qwen3.7-plus`
+- `QWEN_OCR_MODEL`：默认 `qwen3.7-plus`
 
 失败不会回退到其它引擎，请手工填写。识别结果仍是草稿，必须在页面上核对。
 

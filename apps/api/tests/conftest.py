@@ -14,7 +14,7 @@ os.environ.setdefault("FEISHU_APP_ID", "")
 os.environ.setdefault("UPLOAD_DIR", "/tmp/portal-test-uploads")
 os.environ.setdefault("QWEN_API_KEY", "")
 os.environ.setdefault("QWEN_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
-os.environ.setdefault("QWEN_OCR_MODEL", "qwen3.5-ocr")
+os.environ.setdefault("QWEN_OCR_MODEL", "qwen3.7-plus")
 
 from collections.abc import Generator
 

@@ -36,9 +36,9 @@ services:
       # 容器之间用服务名通信，不要用 localhost
       DATABASE_URL: postgresql+psycopg://portal:portal@db:5432/portal
       UPLOAD_DIR: /app/data/uploads
-      # 扫描件 OCR：百炼 OpenAI 兼容地址。key 从 .env 的 QWEN_API_KEY 读。
+      # 合同理解：百炼 OpenAI 兼容地址。key 从 .env 的 QWEN_API_KEY 读。
       QWEN_BASE_URL: ${QWEN_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
-      QWEN_OCR_MODEL: ${QWEN_OCR_MODEL:-qwen3.5-ocr}
+      QWEN_OCR_MODEL: ${QWEN_OCR_MODEL:-qwen3.7-plus}
     volumes:
       # 上传文件保存在 compose 文件所在目录
       - ./data/uploads:/app/data/uploads

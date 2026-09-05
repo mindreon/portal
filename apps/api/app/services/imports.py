@@ -25,8 +25,8 @@ from app.services.extract import (
     ExtractedFields,
     build_schedules,
     derive_counterparty,
-    extract_fields,
     identity_key,
+    merge_extracted_fields,
     normalize_contract_no,
     unnumbered_fingerprint,
 )
@@ -171,7 +171,7 @@ def run_import(db: Session, user: User, uploads: list[tuple[str, bytes]]) -> Imp
             continue
         stored = _write_bytes(batch.id, original_name, data)
         parsed = parse_pdf_bytes(data)
-        fields = extract_fields(parsed.text)
+        fields = parsed.fields
         row = ContractFile(
             batch_id=batch.id,
             original_name=original_name[:255],
@@ -190,6 +190,7 @@ def run_import(db: Session, user: User, uploads: list[tuple[str, bytes]]) -> Imp
         warnings.extend(fields.warnings)
 
     contract_piles: dict[str, Contract] = {}
+    pile_fields: dict[str, ExtractedFields] = {}
     existing = {
         item.contract_no: item
         for item in db.scalars(select(Contract).where(Contract.contract_no.is_not(None))).all()
@@ -218,6 +219,9 @@ def run_import(db: Session, user: User, uploads: list[tuple[str, bytes]]) -> Imp
                 if numbered:
                     existing[numbered] = contract
             contract_piles[key] = contract
+            pile_fields[key] = fields
+        else:
+            pile_fields[key], _ = merge_extracted_fields(pile_fields[key], fields)
         row.contract_id = contract.id
         row.doc_type = "invoice" if fields.doc_type == "invoice" else "contract"
         touched_ids.append(contract.id)
@@ -235,16 +239,13 @@ def run_import(db: Session, user: User, uploads: list[tuple[str, bytes]]) -> Imp
         for extracted in fields.invoices:
             _add_invoice_draft(db, user, target, extracted.invoice_code, extracted.invoice_no, extracted.amount, user_id=user.id)
 
-    for contract in list({item.id: item for item in contract_piles.values()}.values()):
+    for key, contract in contract_piles.items():
         already = db.scalars(
             select(PaymentSchedule).where(PaymentSchedule.contract_id == contract.id)
         ).first()
         if already:
             continue
-        file_rows = list(
-            db.scalars(select(ContractFile).where(ContractFile.contract_id == contract.id))
-        )
-        combined = extract_fields("\n".join(item.extracted_text or "" for item in file_rows))
+        combined = pile_fields.get(key) or ExtractedFields()
         for index, item in enumerate(build_schedules(contract.amount, combined.schedules), start=1):
             db.add(
                 PaymentSchedule(

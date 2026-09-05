@@ -1,8 +1,11 @@
 """
-从合同/发票文本里抽出要素。
+合同/发票草稿要素。
 
-这是「人核对之前」的草稿：用正则找常见标签。扫描件 OCR 会认错字，
-所以页面上必须让人改完再当正式数据。
+正文不再用正则抠字段：每一页交给通义千问理解，这里只负责
+- 把模型 JSON 转成类型
+- 把多页结果合并
+- 判断草稿信息是否已经齐了（齐了就停止翻页）
+- 入库时按编号/指纹分堆
 """
 
 from __future__ import annotations
@@ -13,33 +16,19 @@ from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal, InvalidOperation
 
-CONTRACT_NO_RE = re.compile(
-    r"(?:合同编号|合同号|合同編號|Contract\s*No\.?)\s*[:：#]?\s*([A-Za-z0-9][A-Za-z0-9\-_/]{2,31})",
-    re.I,
+# 草稿需要从合同里尽量抽全的字段。模型说还缺其中某项时继续翻页。
+CONTRACT_DRAFT_KEYS = (
+    "contract_no",
+    "party_a",
+    "party_b",
+    "amount",
+    "signed_at",
+    "start_date",
+    "end_date",
+    "schedules",
 )
-PARTY_A_RE = re.compile(r"甲\s*方(?:主体)?(?:（[^）]*）|\([^)]*\))?\s*[:：]\s*([^\n]{2,80})")
-PARTY_B_RE = re.compile(r"乙\s*方(?:主体)?(?:（[^）]*）|\([^)]*\))?\s*[:：]\s*([^\n]{2,80})")
-AMOUNT_RE = re.compile(
-    r"(?:合同总金额|合同金额|总金额)\s*[(（]元[)）]?\s*[:：]?\s*[¥￥]?\s*([\d,]+(?:\.\d{1,2})?)"
-)
-SIGNED_RE = re.compile(
-    r"(?:合同签订时间|签订时间|签订日期|签约日期|签署日期)\s*[:：]?\s*"
-    r"(\d{4}\s*[-./年]\s*\d{1,2}\s*[-./月]\s*\d{1,2}\s*日?)"
-)
-PERIOD_RE = re.compile(
-    r"(?:履约期限|履行期限|服务期限)(?:（起止）)?\s*[:：]?\s*"
-    r"(\d{4}\s*[-./年]\s*\d{1,2}\s*[-./月]\s*\d{1,2}\s*日?)\s*(?:至|—|--|-|~)\s*"
-    r"(\d{4}\s*[-./年]\s*\d{1,2}\s*[-./月]\s*\d{1,2}\s*日?)"
-)
-INVOICE_CODE_RE = re.compile(r"发票代码\s*[:：]?\s*(\d{10,12})")
-INVOICE_NO_RE = re.compile(r"发票号码\s*[:：]?\s*(\d{8,20})")
-INVOICE_AMOUNT_RE = re.compile(
-    r"(?:发票金额|价税合计)\s*[(（]元[)）]?\s*[:：]?\s*[¥￥]?\s*([\d,]+(?:\.\d{1,2})?)"
-)
-PERCENT_PAY_RE = re.compile(
-    r"(首付款|首期款|首期|第一期|第二期|第三期|第四期|尾款|验收款|预付款)"
-    r"[^。\n%]{0,24}?(\d{1,3})\s*%"
-)
+INVOICE_DRAFT_KEYS = ("invoice_code", "invoice_no", "invoices", "amount")
+KNOWN_STILL_NEEDED = set(CONTRACT_DRAFT_KEYS) | set(INVOICE_DRAFT_KEYS) | {"title"}
 
 
 @dataclass
@@ -74,6 +63,7 @@ class ExtractedFields:
 
 
 def parse_date(raw: str | None) -> date | None:
+    """把模型返回的日期字符串变成 date。不是对合同正文做标签匹配。"""
     if not raw:
         return None
     digits = re.findall(r"\d+", raw)
@@ -86,104 +76,260 @@ def parse_date(raw: str | None) -> date | None:
 
 
 def parse_money(raw: str | None) -> Decimal | None:
+    """把模型返回的金额字符串变成 Decimal。"""
     if not raw:
         return None
+    cleaned = (
+        str(raw)
+        .replace(",", "")
+        .replace("，", "")
+        .replace("¥", "")
+        .replace("￥", "")
+        .replace("元", "")
+        .strip()
+    )
+    if not cleaned:
+        return None
     try:
-        return Decimal(raw.replace(",", "").replace("，", ""))
+        return Decimal(cleaned)
     except InvalidOperation:
         return None
 
 
-def _clean_party(raw: str) -> str:
-    raw = re.split(r"(?=乙方|甲方|合同总|合同编|合同金|发票|签订|履约)", raw)[0]
-    return re.sub(r"\s+", "", raw).strip(" ：:、,，")
+def already_as_prompt_dict(fields: ExtractedFields) -> dict:
+    """给下一页模型看：前面已经抽到了什么。"""
+    return {
+        "doc_type": fields.doc_type,
+        "contract_no": fields.contract_no,
+        "party_a": fields.party_a,
+        "party_b": fields.party_b,
+        "amount": str(fields.amount) if fields.amount is not None else "",
+        "signed_at": fields.signed_at.isoformat() if fields.signed_at else "",
+        "start_date": fields.start_date.isoformat() if fields.start_date else "",
+        "end_date": fields.end_date.isoformat() if fields.end_date else "",
+        "title": fields.title,
+        "invoices": [
+            {
+                "code": item.invoice_code,
+                "no": item.invoice_no,
+                "amount": str(item.amount) if item.amount is not None else "",
+            }
+            for item in fields.invoices
+        ],
+        "schedules": [
+            {"name": item.name, "percent": item.percent}
+            for item in fields.schedules
+        ],
+    }
 
 
-def extract_fields(text: str) -> ExtractedFields:
-    """从一段纯文本抽出草稿要素。"""
+def fields_from_llm_payload(data: dict) -> ExtractedFields:
+    """把一页模型返回的 JSON 转成 ExtractedFields。空值表示本页没看到。"""
     result = ExtractedFields()
-    if not text or not text.strip():
+    if not isinstance(data, dict):
         return result
 
-    nos = [match.group(1) for match in CONTRACT_NO_RE.finditer(text)]
-    if nos:
-        result.contract_no = nos[0]
-        result.extra_contract_nos = [item for item in dict.fromkeys(nos[1:]) if item != nos[0]]
-        if result.extra_contract_nos:
-            result.warnings.append("同一文件里读到多个合同编号，已按第一个分堆，请人工确认是否要拆开。")
+    doc_type = str(data.get("doc_type") or "unknown").strip().lower()
+    if doc_type in {"contract", "invoice", "unknown"}:
+        result.doc_type = doc_type
 
-    party_a = PARTY_A_RE.search(text)
-    party_b = PARTY_B_RE.search(text)
-    if party_a:
-        result.party_a = _clean_party(party_a.group(1))
-    if party_b:
-        result.party_b = _clean_party(party_b.group(1))
+    result.contract_no = str(data.get("contract_no") or "").strip()
+    extras = data.get("extra_contract_nos") or []
+    if isinstance(extras, list):
+        result.extra_contract_nos = [
+            str(item).strip() for item in extras if str(item).strip() and str(item).strip() != result.contract_no
+        ]
 
-    amount = AMOUNT_RE.search(text)
-    result.amount = parse_money(amount.group(1) if amount else None)
+    result.party_a = str(data.get("party_a") or "").strip()
+    result.party_b = str(data.get("party_b") or "").strip()
+    result.title = str(data.get("title") or "").strip()
+    result.amount = parse_money(_optional_str(data.get("amount")))
+    result.signed_at = parse_date(_optional_str(data.get("signed_at")))
+    result.start_date = parse_date(_optional_str(data.get("start_date")))
+    result.end_date = parse_date(_optional_str(data.get("end_date")))
 
-    signed = SIGNED_RE.search(text)
-    result.signed_at = parse_date(signed.group(1) if signed else None)
-
-    period = PERIOD_RE.search(text)
-    if period:
-        result.start_date = parse_date(period.group(1))
-        result.end_date = parse_date(period.group(2))
-
-    invoice_code = INVOICE_CODE_RE.search(text)
-    invoice_no = INVOICE_NO_RE.search(text)
-    invoice_amount = INVOICE_AMOUNT_RE.search(text)
-    if invoice_code or invoice_no:
-        result.invoices.append(
-            ExtractedInvoice(
-                invoice_code=invoice_code.group(1) if invoice_code else "",
-                invoice_no=invoice_no.group(1) if invoice_no else "",
-                amount=parse_money(invoice_amount.group(1) if invoice_amount else None),
-            )
-        )
-
-    seen_names: set[str] = set()
-    for match in PERCENT_PAY_RE.finditer(text):
-        name, percent = match.group(1), int(match.group(2))
-        if name in seen_names or percent > 100:
+    for inv in data.get("invoices") or []:
+        if not isinstance(inv, dict):
             continue
-        seen_names.add(name)
+        code = str(inv.get("code") or inv.get("invoice_code") or "").strip()
+        number = str(inv.get("no") or inv.get("invoice_no") or "").strip()
+        money = parse_money(_optional_str(inv.get("amount")))
+        if code or number:
+            result.invoices.append(ExtractedInvoice(invoice_code=code, invoice_no=number, amount=money))
+
+    for row in data.get("schedules") or []:
+        if not isinstance(row, dict):
+            continue
+        name = str(row.get("name") or "").strip()
+        if not name:
+            continue
+        percent_raw = row.get("percent")
+        percent: int | None = None
+        if percent_raw is not None and str(percent_raw).strip() != "":
+            try:
+                percent = int(percent_raw)
+            except (TypeError, ValueError):
+                percent = None
+        if percent is not None and not 0 <= percent <= 100:
+            continue
         result.schedules.append(ExtractedSchedule(name=name, percent=percent))
-
-    has_contract = bool(result.contract_no or result.party_a or result.party_b or result.amount)
-    has_invoice = bool(result.invoices)
-    if has_invoice and not has_contract:
-        result.doc_type = "invoice"
-    elif has_contract:
-        result.doc_type = "contract"
-        if result.party_a and result.party_b:
-            result.title = f"{result.party_a}与{result.party_b}合同"
-        elif result.contract_no:
-            result.title = f"合同 {result.contract_no}"
-    elif has_invoice:
-        result.doc_type = "invoice"
-
-    if result.doc_type == "contract" and not result.contract_no:
-        if not result.title:
-            result.title = "未编号合同"
-        result.warnings.append("未读到合同编号，已单独成一份草稿。系统用内部 ID 区分，编号可后补。")
 
     return result
 
 
-def has_enough_draft_fields(fields: ExtractedFields) -> bool:
-    """
-    扫描件按页 OCR 时用：草稿核心字段齐了就停，少花 token。
+def still_needed_from_payload(data: dict) -> list[str]:
+    raw = data.get("still_needed") or []
+    if not isinstance(raw, list):
+        return []
+    out: list[str] = []
+    for item in raw:
+        key = str(item).strip()
+        if key in KNOWN_STILL_NEEDED and key not in out:
+            out.append(key)
+    return out
 
-    合同：编号 + 甲乙方 + 金额。没编号就继续往后翻，尽量把编号找出来。
-    发票：发票代码 + 发票号码。
+
+def merge_extracted_fields(base: ExtractedFields, incoming: ExtractedFields) -> tuple[ExtractedFields, bool]:
+    """后面的页只补充空缺，不会用空值把已有字段盖掉。返回是否新增了信息。"""
+    added = False
+    out = ExtractedFields(
+        doc_type=base.doc_type,
+        contract_no=base.contract_no,
+        extra_contract_nos=list(base.extra_contract_nos),
+        title=base.title,
+        party_a=base.party_a,
+        party_b=base.party_b,
+        amount=base.amount,
+        signed_at=base.signed_at,
+        start_date=base.start_date,
+        end_date=base.end_date,
+        invoices=list(base.invoices),
+        schedules=list(base.schedules),
+        warnings=list(base.warnings),
+    )
+
+    if incoming.doc_type != "unknown" and (out.doc_type == "unknown" or incoming.doc_type == "contract"):
+        if out.doc_type != incoming.doc_type:
+            out.doc_type = incoming.doc_type
+            added = True
+
+    def fill_str(current: str, new: str) -> str:
+        nonlocal added
+        if not current and new:
+            added = True
+            return new
+        return current
+
+    out.contract_no = fill_str(out.contract_no, incoming.contract_no)
+    out.title = fill_str(out.title, incoming.title)
+    out.party_a = fill_str(out.party_a, incoming.party_a)
+    out.party_b = fill_str(out.party_b, incoming.party_b)
+
+    if incoming.contract_no and incoming.contract_no != out.contract_no:
+        if incoming.contract_no not in out.extra_contract_nos:
+            out.extra_contract_nos.append(incoming.contract_no)
+            added = True
+    for extra in incoming.extra_contract_nos:
+        if extra and extra != out.contract_no and extra not in out.extra_contract_nos:
+            out.extra_contract_nos.append(extra)
+            added = True
+
+    if out.amount is None and incoming.amount is not None:
+        out.amount = incoming.amount
+        added = True
+    if out.signed_at is None and incoming.signed_at is not None:
+        out.signed_at = incoming.signed_at
+        added = True
+    if out.start_date is None and incoming.start_date is not None:
+        out.start_date = incoming.start_date
+        added = True
+    if out.end_date is None and incoming.end_date is not None:
+        out.end_date = incoming.end_date
+        added = True
+
+    seen_invoices = {(item.invoice_code, item.invoice_no) for item in out.invoices}
+    for item in incoming.invoices:
+        key = (item.invoice_code, item.invoice_no)
+        if key in seen_invoices:
+            continue
+        out.invoices.append(item)
+        seen_invoices.add(key)
+        added = True
+
+    seen_schedules = {item.name for item in out.schedules}
+    for item in incoming.schedules:
+        if item.name in seen_schedules:
+            continue
+        out.schedules.append(item)
+        seen_schedules.add(item.name)
+        added = True
+
+    for warning in incoming.warnings:
+        if warning and warning not in out.warnings:
+            out.warnings.append(warning)
+
+    return out, added
+
+
+def finalize_fields(fields: ExtractedFields) -> ExtractedFields:
+    """全部页读完后补标题、未编号提示。"""
+    has_contract = bool(fields.contract_no or fields.party_a or fields.party_b or fields.amount)
+    has_invoice = bool(fields.invoices)
+    if has_invoice and not has_contract:
+        fields.doc_type = "invoice"
+    elif has_contract:
+        fields.doc_type = "contract"
+        if fields.party_a and fields.party_b:
+            fields.title = fields.title or f"{fields.party_a}与{fields.party_b}合同"
+        elif fields.contract_no:
+            fields.title = fields.title or f"合同 {fields.contract_no}"
+        if not fields.contract_no:
+            fields.title = fields.title or "未编号合同"
+            note = "未读到合同编号，已单独成一份草稿。系统用内部 ID 区分，编号可后补。"
+            if note not in fields.warnings:
+                fields.warnings.append(note)
+        if fields.extra_contract_nos:
+            note = "同一文件里读到多个合同编号，已按第一个分堆，请人工确认是否要拆开。"
+            if note not in fields.warnings:
+                fields.warnings.append(note)
+    elif has_invoice:
+        fields.doc_type = "invoice"
+    return fields
+
+
+def extraction_complete(fields: ExtractedFields, still_needed: list[str] | None) -> bool:
     """
-    if fields.contract_no and fields.party_a and fields.party_b and fields.amount is not None:
-        return True
-    if fields.invoices:
-        invoice = fields.invoices[0]
-        if invoice.invoice_code and invoice.invoice_no:
+    草稿信息齐了就停止翻页。
+
+    1. 模型列出的 still_needed（只认我们关心的键）为空，并且核心主体/金额已有；
+    2. 或者合同草稿字段都已填上（分期若模型仍说缺，就继续找）。
+    """
+    pending = [key for key in (still_needed or []) if key in KNOWN_STILL_NEEDED]
+    invoice_only = bool(fields.invoices) and not (fields.party_a or fields.party_b or fields.contract_no)
+    if invoice_only or fields.doc_type == "invoice":
+        invoice = fields.invoices[0] if fields.invoices else None
+        invoice_ok = bool(invoice and invoice.invoice_no)
+        if invoice_ok and not any(key in pending for key in INVOICE_DRAFT_KEYS):
             return True
+
+    required_filled = bool(
+        fields.contract_no
+        and fields.party_a
+        and fields.party_b
+        and fields.amount is not None
+        and fields.signed_at is not None
+        and fields.start_date is not None
+        and fields.end_date is not None
+    )
+    if required_filled and "schedules" not in pending:
+        return True
+    if required_filled:
+        return not pending
+
+    core = bool(fields.party_a and fields.party_b and fields.amount is not None)
+    if core and not pending:
+        # 模型认为这份文件里本来就没有编号或日期，不必为找不到的字段读完整本附录。
+        return True
     return False
 
 
@@ -250,3 +396,10 @@ def build_schedules(amount: Decimal | None, extracted: list[ExtractedSchedule]) 
             rows.append(ExtractedSchedule(name=item.name, percent=item.percent, amount=money))
         return rows
     return [ExtractedSchedule(name="一次性", percent=100, amount=total)]
+
+
+def _optional_str(value: object) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
