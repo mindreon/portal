@@ -1,8 +1,9 @@
 """
-读 PDF：一页一页交给通义千问理解，草稿信息齐了就停。
+读 PDF：一页一页交给通义千问理解。
 
 - 这一页能抽出电子字 → 只发文本给 3.7（比整页图便宜）
 - 这一页几乎没字 → 渲成 JPEG 再理解
+- 合同默认至少读 5 页（文件不够 5 页就全读）；草稿还没齐再继续，最多 12 页
 - 不在正文上做正则匹配
 """
 
@@ -22,7 +23,7 @@ from app.services.extract import (
     is_usable_subject_name,
     merge_extracted_fields,
 )
-from app.services.qwen_ocr import MAX_PAGES, PdfRenderer, PdfRenderError, understand_page
+from app.services.qwen_ocr import MAX_PAGES, MIN_PAGES, PdfRenderer, PdfRenderError, understand_page
 
 # 一页压缩后少于此字数，当作扫描页看图。
 PAGE_TEXT_MIN = 20
@@ -105,6 +106,8 @@ def _understand_pdf(data: bytes, page_texts: list[str]) -> ParsedPdf:
                 chunks.append(note)
             merged, added = merge_extracted_fields(merged, page_fields)
             still_needed = page_needed
+            if not _min_pages_done(index, len(page_texts)):
+                continue
             if extraction_complete(merged, still_needed):
                 logger.info("合同理解在第 %s 页后停止：草稿信息已齐", index + 1)
                 break
@@ -127,6 +130,11 @@ def _understand_pdf(data: bytes, page_texts: list[str]) -> ParsedPdf:
     if not text and last_error:
         return ParsedPdf(text="", source=source, error=last_error, fields=fields)
     return ParsedPdf(text=text, source=source, error=last_error, fields=fields)
+
+
+def _min_pages_done(index: int, total_pages: int) -> bool:
+    """前 5 页（或全文，若不足 5 页）读完之前，不因「信息已齐」提前停。"""
+    return index + 1 >= min(MIN_PAGES, total_pages)
 
 
 def _is_hard_error(message: str) -> bool:

@@ -26,10 +26,30 @@ class _FakeRenderer:
         self.closed = False
 
     def jpeg(self, index: int) -> bytes:
-        return [b"page-1", b"page-2", b"page-3"][index]
+        return f"page-{index + 1}".encode()
 
     def close(self) -> None:
         self.closed = True
+
+
+def _long_page(n: int, extra: str = "") -> str:
+    return f"第{n}页{extra}写了足够长的电子正文，用来超过文本阈值。"
+
+
+def _complete_contract(**overrides: object) -> dict:
+    payload: dict = {
+        "doc_type": "contract",
+        "contract_no": "HT-1",
+        "party_a": "星河科技有限公司",
+        "party_b": "本地运营主体",
+        "amount": "120000",
+        "signed_at": "2026-01-01",
+        "start_date": "2026-01-01",
+        "end_date": "2026-12-31",
+        "subject_name": "AI 调度软件",
+    }
+    payload.update(overrides)
+    return payload
 
 
 def _enable_qwen(monkeypatch) -> None:
@@ -51,7 +71,7 @@ def test_electronic_pages_understood_until_complete(monkeypatch) -> None:
         [
             "第1页封面写了甲乙双方的正式名称，足够超过文本阈值。",
             "第2页写明合同编号金额以及签订日和履约起止期限。",
-            "第3页是不该再理解的附录条款。",
+                "第3页是附录条款，也要读完，正文必须足够长才能当电子页理解。",
         ],
     )
     calls: list[str | None] = []
@@ -83,7 +103,7 @@ def test_electronic_pages_understood_until_complete(monkeypatch) -> None:
                 [],
                 None,
             )
-        raise AssertionError("草稿已齐，不应再理解后面的页")
+        return fields_from_llm_payload({}), [], None
 
     monkeypatch.setattr("app.services.pdf_parse.understand_page", fake_understand)
     result = parse_pdf_bytes(b"%PDF-fake")
@@ -91,8 +111,7 @@ def test_electronic_pages_understood_until_complete(monkeypatch) -> None:
     assert result.fields.contract_no == "HT-1"
     assert result.fields.party_a == "星河科技有限公司"
     assert result.fields.amount is not None
-    assert len(calls) == 2
-    assert calls[1] and "第2页" in calls[1]
+    assert len(calls) == 3
 
 
 def test_generic_cover_subject_keeps_reading_for_goods_list(monkeypatch) -> None:
@@ -103,7 +122,7 @@ def test_generic_cover_subject_keeps_reading_for_goods_list(monkeypatch) -> None
         [
             "第1页软件产品销售合同，甲方医院，乙方北京时序天成技术有限公司，金额已写明，内容足够长。",
             "第2页合同标的：AI调度软件、交换机、防火墙等设备，内容足够长。",
-            "第3页附录保密条款。",
+                "第3页附录保密条款，正文必须足够长才能当电子页继续理解。",
         ],
     )
     calls: list[str | None] = []
@@ -136,13 +155,13 @@ def test_generic_cover_subject_keeps_reading_for_goods_list(monkeypatch) -> None
                 [],
                 None,
             )
-        raise AssertionError("标的已齐，不应再读保密附录")
+        return fields_from_llm_payload({}), [], None
 
     monkeypatch.setattr("app.services.pdf_parse.understand_page", fake_understand)
     result = parse_pdf_bytes(b"%PDF-fake")
     assert result.fields.subject_name == "AI 调度软件、交换机、防火墙等设备"
     assert result.fields.party_b == "北京时序天成技术有限公司"
-    assert len(calls) == 2
+    assert len(calls) == 3
 
 
 def test_electronic_keeps_reading_for_payment_schedule(monkeypatch) -> None:
@@ -152,7 +171,7 @@ def test_electronic_keeps_reading_for_payment_schedule(monkeypatch) -> None:
         [
             "第1页已经有编号甲乙金额签订日和履约期限，内容足够长。",
             "第2页付款方式：第一期百分之三十，尾款百分之七十，内容足够长。",
-            "第3页附录。",
+                "第3页附录条款，正文必须足够长才能当电子页继续理解。",
         ],
     )
     calls: list[str | None] = []
@@ -185,12 +204,12 @@ def test_electronic_keeps_reading_for_payment_schedule(monkeypatch) -> None:
                 [],
                 None,
             )
-        raise AssertionError("分期已齐，不应再读附录")
+        return fields_from_llm_payload({}), [], None
 
     monkeypatch.setattr("app.services.pdf_parse.understand_page", fake_understand)
     result = parse_pdf_bytes(b"%PDF-fake")
     assert [item.name for item in result.fields.schedules] == ["第一期", "尾款"]
-    assert len(calls) == 2
+    assert len(calls) == 3
 
 
 def test_scanned_pages_use_image_and_stop_when_complete(monkeypatch) -> None:
@@ -220,13 +239,13 @@ def test_scanned_pages_use_image_and_stop_when_complete(monkeypatch) -> None:
                 [],
                 None,
             )
-        raise AssertionError("封面信息已齐，不应再看后面的扫描页")
+        return fields_from_llm_payload({}), [], None
 
     monkeypatch.setattr("app.services.pdf_parse.understand_page", fake_understand)
     result = parse_pdf_bytes(b"%PDF-fake")
     assert result.source == "scanned"
     assert result.fields.contract_no == "HT-SCAN-1"
-    assert calls == [b"page-1"]
+    assert calls == [b"page-1", b"page-2", b"page-3"]
 
 
 def test_scanned_reads_next_page_when_number_still_needed(monkeypatch) -> None:
@@ -247,11 +266,11 @@ def test_scanned_reads_next_page_when_number_still_needed(monkeypatch) -> None:
             )
         if image_jpeg == b"page-2":
             return fields_from_llm_payload({"contract_no": "HT-PAGE-2", "subject_name": "交换机"}), [], None
-        raise AssertionError("编号已找到，不应再看第3页")
+        return fields_from_llm_payload({}), [], None
 
     monkeypatch.setattr("app.services.pdf_parse.understand_page", fake_understand)
     result = parse_pdf_bytes(b"%PDF-fake")
-    assert calls == [b"page-1", b"page-2"]
+    assert calls == [b"page-1", b"page-2", b"page-3"]
     assert result.fields.contract_no == "HT-PAGE-2"
 
 
@@ -394,3 +413,62 @@ def test_understand_skipped_without_key() -> None:
     assert fields.contract_no == ""
     assert needed == []
     assert error and "QWEN_API_KEY" in error
+
+
+def test_reads_all_pages_when_file_shorter_than_five(monkeypatch) -> None:
+    _enable_qwen(monkeypatch)
+    _pages(monkeypatch, [_long_page(1, "封面"), _long_page(2, "标的"), _long_page(3, "附录")])
+    calls: list[str | None] = []
+
+    def fake_understand(*, already, page_text=None, image_jpeg=None):
+        calls.append(page_text)
+        if page_text and "第1页" in page_text:
+            return fields_from_llm_payload(_complete_contract()), [], None
+        return fields_from_llm_payload({}), [], None
+
+    monkeypatch.setattr("app.services.pdf_parse.understand_page", fake_understand)
+    result = parse_pdf_bytes(b"%PDF-fake")
+    assert result.fields.contract_no == "HT-1"
+    assert len(calls) == 3
+
+
+def test_reads_at_least_five_pages_even_if_complete_early(monkeypatch) -> None:
+    _enable_qwen(monkeypatch)
+    _pages(monkeypatch, [_long_page(n) for n in range(1, 8)])
+    calls: list[str | None] = []
+
+    def fake_understand(*, already, page_text=None, image_jpeg=None):
+        calls.append(page_text)
+        if page_text and "第2页" in page_text:
+            return fields_from_llm_payload(_complete_contract()), [], None
+        if page_text and "第6页" in page_text:
+            raise AssertionError("第5页后信息已齐，不应再读第6页")
+        return fields_from_llm_payload({}), [], None
+
+    monkeypatch.setattr("app.services.pdf_parse.understand_page", fake_understand)
+    result = parse_pdf_bytes(b"%PDF-fake")
+    assert result.fields.subject_name == "AI 调度软件"
+    assert len(calls) == 5
+
+
+def test_keeps_reading_after_five_pages_if_still_incomplete(monkeypatch) -> None:
+    _enable_qwen(monkeypatch)
+    _pages(monkeypatch, [_long_page(n) for n in range(1, 8)])
+    calls: list[str | None] = []
+
+    def fake_understand(*, already, page_text=None, image_jpeg=None):
+        calls.append(page_text)
+        if page_text and "第6页" in page_text:
+            return fields_from_llm_payload(_complete_contract(contract_no="HT-LATE")), [], None
+        if page_text and "第7页" in page_text:
+            raise AssertionError("第6页已齐，不应再读第7页")
+        return (
+            fields_from_llm_payload({"doc_type": "contract", "party_a": "甲", "party_b": "乙", "amount": "1"}),
+            ["contract_no", "subject_name", "signed_at"],
+            None,
+        )
+
+    monkeypatch.setattr("app.services.pdf_parse.understand_page", fake_understand)
+    result = parse_pdf_bytes(b"%PDF-fake")
+    assert result.fields.contract_no == "HT-LATE"
+    assert len(calls) == 6

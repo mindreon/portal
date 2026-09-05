@@ -28,7 +28,8 @@ from app.services.extract import (
 
 logger = logging.getLogger(__name__)
 
-# 一页一页理解，齐了就停；12 页足够覆盖封面、期限、付款，避免把整本附录读完。
+# 合同默认至少读 5 页（不够就全读）；信息不齐再继续，最多 12 页，避免整本附录。
+MIN_PAGES = 5
 MAX_PAGES = 12
 # 长边 1280：扫描件上印刷字仍可读，图像 token 比 scale=2 原图少一半。
 MAX_IMAGE_SIDE = 1280
