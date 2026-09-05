@@ -3,9 +3,9 @@ from io import BytesIO
 from PIL import Image
 
 from app.core.config import get_settings
-from app.services.extract import extract_fields, has_enough_draft_fields
+from app.services.extract import fields_from_llm_payload
 from app.services.pdf_parse import parse_pdf_bytes
-from app.services.qwen_ocr import MAX_IMAGE_SIDE, jpeg_for_ocr, qwen_ocr_image
+from app.services.qwen_ocr import MAX_IMAGE_SIDE, jpeg_for_ocr, understand_page
 
 
 class _Page:
@@ -21,12 +21,15 @@ class _Reader:
         self.pages = pages
 
 
-COVER = (
-    "合同编号：HT-SCAN-1\n"
-    "甲方：星河科技有限公司\n"
-    "乙方：本地运营主体\n"
-    "合同总金额（元）：120000.00"
-)
+class _FakeRenderer:
+    def __init__(self, _data: bytes) -> None:
+        self.closed = False
+
+    def jpeg(self, index: int) -> bytes:
+        return [b"page-1", b"page-2", b"page-3"][index]
+
+    def close(self) -> None:
+        self.closed = True
 
 
 def _enable_qwen(monkeypatch) -> None:
@@ -34,155 +37,202 @@ def _enable_qwen(monkeypatch) -> None:
     get_settings.cache_clear()
 
 
-def _blank_pdf(monkeypatch) -> None:
+def _pages(monkeypatch, texts: list[str]) -> None:
     monkeypatch.setattr(
         "app.services.pdf_parse.PdfReader",
-        lambda *_args, **_kwargs: _Reader([_Page("")]),
+        lambda *_args, **_kwargs: _Reader([_Page(item) for item in texts]),
     )
 
 
-def test_electronic_pdf_skips_ocr(monkeypatch) -> None:
-    monkeypatch.setattr(
-        "app.services.pdf_parse.PdfReader",
-        lambda *_args, **_kwargs: _Reader([_Page("甲方：星河科技有限公司合同正文内容" * 8)]),
+def test_electronic_pages_understood_until_complete(monkeypatch) -> None:
+    _enable_qwen(monkeypatch)
+    _pages(
+        monkeypatch,
+        [
+            "第1页封面写了甲乙双方的正式名称，足够超过文本阈值。",
+            "第2页写明合同编号金额以及签订日和履约起止期限。",
+            "第3页是不该再理解的附录条款。",
+        ],
     )
+    calls: list[str | None] = []
 
-    def boom(*_args, **_kwargs):
-        raise AssertionError("电子件不应走 OCR")
+    def fake_understand(*, already, page_text=None, image_jpeg=None):
+        assert image_jpeg is None
+        calls.append(page_text)
+        if page_text and "第1页" in page_text:
+            return (
+                fields_from_llm_payload(
+                    {"doc_type": "contract", "party_a": "星河科技有限公司", "party_b": "本地运营主体"}
+                ),
+                ["contract_no", "amount", "signed_at", "start_date", "end_date"],
+                None,
+            )
+        if page_text and "第2页" in page_text:
+            return (
+                fields_from_llm_payload(
+                    {
+                        "doc_type": "contract",
+                        "contract_no": "HT-1",
+                        "amount": "120000",
+                        "signed_at": "2026-01-01",
+                        "start_date": "2026-01-01",
+                        "end_date": "2026-12-31",
+                    }
+                ),
+                [],
+                None,
+            )
+        raise AssertionError("草稿已齐，不应再理解后面的页")
 
-    monkeypatch.setattr("app.services.pdf_parse._ocr_pdf", boom)
+    monkeypatch.setattr("app.services.pdf_parse.understand_page", fake_understand)
     result = parse_pdf_bytes(b"%PDF-fake")
     assert result.source == "electronic"
-    assert "星河" in result.text
+    assert result.fields.contract_no == "HT-1"
+    assert result.fields.party_a == "星河科技有限公司"
+    assert result.fields.amount is not None
+    assert len(calls) == 2
+    assert calls[1] and "第2页" in calls[1]
 
 
-def test_scanned_pdf_uses_qwen_one_page(monkeypatch) -> None:
+def test_electronic_keeps_reading_for_payment_schedule(monkeypatch) -> None:
     _enable_qwen(monkeypatch)
-    _blank_pdf(monkeypatch)
-    monkeypatch.setattr(
-        "app.services.pdf_parse.iter_pdf_jpegs",
-        lambda _data, **_kwargs: iter([b"page-1"]),
+    _pages(
+        monkeypatch,
+        [
+            "第1页已经有编号甲乙金额签订日和履约期限，内容足够长。",
+            "第2页付款方式：第一期百分之三十，尾款百分之七十，内容足够长。",
+            "第3页附录。",
+        ],
     )
-    monkeypatch.setattr(
-        "app.services.pdf_parse.qwen_ocr_image",
-        lambda _image: (COVER, None),
-    )
+    calls: list[str | None] = []
+
+    def fake_understand(*, already, page_text=None, image_jpeg=None):
+        calls.append(page_text)
+        if page_text and "第1页" in page_text:
+            return (
+                fields_from_llm_payload(
+                    {
+                        "doc_type": "contract",
+                        "contract_no": "HT-PAY",
+                        "party_a": "甲",
+                        "party_b": "乙",
+                        "amount": "100",
+                        "signed_at": "2026-01-01",
+                        "start_date": "2026-01-01",
+                        "end_date": "2026-12-31",
+                    }
+                ),
+                ["schedules"],
+                None,
+            )
+        if page_text and "第2页" in page_text:
+            return (
+                fields_from_llm_payload(
+                    {"schedules": [{"name": "第一期", "percent": 30}, {"name": "尾款", "percent": 70}]}
+                ),
+                [],
+                None,
+            )
+        raise AssertionError("分期已齐，不应再读附录")
+
+    monkeypatch.setattr("app.services.pdf_parse.understand_page", fake_understand)
+    result = parse_pdf_bytes(b"%PDF-fake")
+    assert [item.name for item in result.fields.schedules] == ["第一期", "尾款"]
+    assert len(calls) == 2
+
+
+def test_scanned_pages_use_image_and_stop_when_complete(monkeypatch) -> None:
+    _enable_qwen(monkeypatch)
+    _pages(monkeypatch, ["", "", ""])
+    monkeypatch.setattr("app.services.pdf_parse.PdfRenderer", _FakeRenderer)
+    calls: list[bytes | None] = []
+
+    def fake_understand(*, already, page_text=None, image_jpeg=None):
+        assert page_text is None
+        calls.append(image_jpeg)
+        if image_jpeg == b"page-1":
+            return (
+                fields_from_llm_payload(
+                    {
+                        "doc_type": "contract",
+                        "contract_no": "HT-SCAN-1",
+                        "party_a": "星河科技有限公司",
+                        "party_b": "本地运营主体",
+                        "amount": "120000.00",
+                        "signed_at": "2026-01-01",
+                        "start_date": "2026-01-01",
+                        "end_date": "2026-12-31",
+                    }
+                ),
+                [],
+                None,
+            )
+        raise AssertionError("封面信息已齐，不应再看后面的扫描页")
+
+    monkeypatch.setattr("app.services.pdf_parse.understand_page", fake_understand)
     result = parse_pdf_bytes(b"%PDF-fake")
     assert result.source == "scanned"
-    assert "HT-SCAN-1" in result.text
-    assert result.error is None
-
-
-def test_scanned_pdf_stops_when_cover_has_enough_fields(monkeypatch) -> None:
-    _enable_qwen(monkeypatch)
-    _blank_pdf(monkeypatch)
-    rendered: list[bytes] = []
-
-    def fake_pages(_data: bytes, **_kwargs):
-        rendered.append(b"page-1")
-        yield b"page-1"
-        rendered.append(b"page-2")
-        yield b"page-2"
-
-    calls: list[bytes] = []
-
-    def fake_ocr(image: bytes) -> tuple[str, str | None]:
-        calls.append(image)
-        if image == b"page-1":
-            return COVER, None
-        raise AssertionError("封面字段已齐，不应再识别后面的页")
-
-    monkeypatch.setattr("app.services.pdf_parse.iter_pdf_jpegs", fake_pages)
-    monkeypatch.setattr("app.services.pdf_parse.qwen_ocr_image", fake_ocr)
-
-    result = parse_pdf_bytes(b"%PDF-fake")
-    assert result.source == "scanned"
-    assert "HT-SCAN-1" in result.text
+    assert result.fields.contract_no == "HT-SCAN-1"
     assert calls == [b"page-1"]
-    assert rendered == [b"page-1"]
 
 
-def test_scanned_pdf_reads_next_page_when_cover_missing_number(monkeypatch) -> None:
+def test_scanned_reads_next_page_when_number_still_needed(monkeypatch) -> None:
     _enable_qwen(monkeypatch)
-    _blank_pdf(monkeypatch)
-    pages = {
-        b"page-1": "甲方：星河科技有限公司\n乙方：本地运营主体\n合同总金额（元）：100",
-        b"page-2": "合同编号：HT-PAGE-2",
-        b"page-3": "这一页不该被识别",
-    }
-    calls: list[bytes] = []
+    _pages(monkeypatch, ["", "", ""])
+    monkeypatch.setattr("app.services.pdf_parse.PdfRenderer", _FakeRenderer)
+    calls: list[bytes | None] = []
 
-    def fake_ocr(image: bytes) -> tuple[str, str | None]:
-        calls.append(image)
-        return pages[image], None
+    def fake_understand(*, already, page_text=None, image_jpeg=None):
+        calls.append(image_jpeg)
+        if image_jpeg == b"page-1":
+            return (
+                fields_from_llm_payload(
+                    {"doc_type": "contract", "party_a": "星河科技有限公司", "party_b": "本地运营主体", "amount": "100"}
+                ),
+                ["contract_no"],
+                None,
+            )
+        if image_jpeg == b"page-2":
+            return fields_from_llm_payload({"contract_no": "HT-PAGE-2"}), [], None
+        raise AssertionError("编号已找到，不应再看第3页")
 
-    monkeypatch.setattr(
-        "app.services.pdf_parse.iter_pdf_jpegs",
-        lambda _data, **_kwargs: iter([b"page-1", b"page-2", b"page-3"]),
-    )
-    monkeypatch.setattr("app.services.pdf_parse.qwen_ocr_image", fake_ocr)
-
+    monkeypatch.setattr("app.services.pdf_parse.understand_page", fake_understand)
     result = parse_pdf_bytes(b"%PDF-fake")
     assert calls == [b"page-1", b"page-2"]
-    assert "HT-PAGE-2" in result.text
-    assert "不该被识别" not in result.text
+    assert result.fields.contract_no == "HT-PAGE-2"
 
 
 def test_qwen_failure_does_not_fallback(monkeypatch) -> None:
     _enable_qwen(monkeypatch)
-    _blank_pdf(monkeypatch)
+    _pages(monkeypatch, [""])
+    monkeypatch.setattr("app.services.pdf_parse.PdfRenderer", _FakeRenderer)
     monkeypatch.setattr(
-        "app.services.pdf_parse.iter_pdf_jpegs",
-        lambda _data, **_kwargs: iter([b"page-1"]),
-    )
-    monkeypatch.setattr(
-        "app.services.pdf_parse.qwen_ocr_image",
-        lambda _image: ("", "Qwen OCR 请求失败：timeout"),
+        "app.services.pdf_parse.understand_page",
+        lambda **_kwargs: (fields_from_llm_payload({}), [], "通义千问请求失败：timeout"),
     )
     result = parse_pdf_bytes(b"%PDF-fake")
     assert result.source == "scanned"
     assert result.text == ""
-    assert result.error and "Qwen OCR 请求失败" in result.error
+    assert result.error and "通义千问请求失败" in result.error
 
 
-def test_scanned_pdf_without_qwen_key_does_not_ocr(monkeypatch) -> None:
-    _blank_pdf(monkeypatch)
-    called = {"render": False, "qwen": False}
+def test_without_key_does_not_call_model(monkeypatch) -> None:
+    _pages(monkeypatch, ["甲方乙方以及足够长的电子正文，用来确认没有密钥时仍能留下文本。"])
+    called = {"model": False}
 
-    def fake_pages(_data: bytes, **_kwargs):
-        called["render"] = True
-        yield b"page-1"
+    def boom(**_kwargs):
+        called["model"] = True
+        raise AssertionError("没配密钥时不应调用模型")
 
-    def fake_ocr(_image: bytes) -> tuple[str, str | None]:
-        called["qwen"] = True
-        return "", "不该调用"
-
-    monkeypatch.setattr("app.services.pdf_parse.iter_pdf_jpegs", fake_pages)
-    monkeypatch.setattr("app.services.pdf_parse.qwen_ocr_image", fake_ocr)
-
+    monkeypatch.setattr("app.services.pdf_parse.understand_page", boom)
     result = parse_pdf_bytes(b"%PDF-fake")
-    assert called == {"render": False, "qwen": False}
-    assert result.source == "scanned"
-    assert result.text == ""
+    assert called == {"model": False}
+    assert "甲方乙方" in result.text
+    assert result.fields.party_a == ""
     assert result.error and "QWEN_API_KEY" in result.error
 
 
-def test_short_electronic_text_with_fields_skips_ocr(monkeypatch) -> None:
-    monkeypatch.setattr(
-        "app.services.pdf_parse.PdfReader",
-        lambda *_args, **_kwargs: _Reader([_Page(COVER)]),
-    )
-
-    def boom(*_args, **_kwargs):
-        raise AssertionError("草稿要素已齐，不应再走 OCR")
-
-    monkeypatch.setattr("app.services.pdf_parse._ocr_pdf", boom)
-    result = parse_pdf_bytes(b"%PDF-fake")
-    assert result.source == "electronic"
-    assert "HT-SCAN-1" in result.text
-
-
-def test_qwen_request_is_single_page_and_disables_thinking(monkeypatch) -> None:
+def test_understand_request_uses_37_and_disables_thinking(monkeypatch) -> None:
     _enable_qwen(monkeypatch)
     captured: dict = {}
 
@@ -191,7 +241,15 @@ def test_qwen_request_is_single_page_and_disables_thinking(monkeypatch) -> None:
             return None
 
         def json(self) -> dict:
-            return {"choices": [{"message": {"content": "合同编号：HT-SCAN-1"}}]}
+            return {
+                "choices": [
+                    {
+                        "message": {
+                            "content": '{"doc_type":"contract","contract_no":"HT-SCAN-1","still_needed":[]}'
+                        }
+                    }
+                ]
+            }
 
     def fake_post(url: str, **kwargs):
         captured["url"] = url
@@ -199,28 +257,53 @@ def test_qwen_request_is_single_page_and_disables_thinking(monkeypatch) -> None:
         return FakeResponse()
 
     monkeypatch.setattr("app.services.qwen_ocr.httpx.post", fake_post)
-    text, error = qwen_ocr_image(b"abc")
+    fields, needed, error = understand_page(already=fields_from_llm_payload({}), page_text="合同编号 HT-SCAN-1")
     assert error is None
-    assert text == "合同编号：HT-SCAN-1"
+    assert fields.contract_no == "HT-SCAN-1"
+    assert needed == []
     payload = captured["json"]
-    assert payload["model"] == "qwen3.5-ocr"
-    assert payload["max_tokens"] == 400
-    assert "enable_thinking" not in payload
+    assert payload["model"] == "qwen3.7-plus"
+    assert payload["enable_thinking"] is False
+    assert payload["max_tokens"] == 1000
     assert captured["url"] == "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
     content = payload["messages"][0]["content"]
-    images = [item for item in content if item.get("type") == "image_url"]
-    assert len(images) == 1
-    assert images[0]["max_pixels"] == 32 * 32 * 1280
+    assert [item for item in content if item.get("type") == "image_url"] == []
     prompt = next(item["text"] for item in content if item.get("type") == "text")
-    assert "全部可见文字" not in prompt
-    assert "合同编号" in prompt
+    assert "不要编造" in prompt
+    assert "still_needed" in prompt
     monkeypatch.setenv("QWEN_API_KEY", "")
     get_settings.cache_clear()
 
 
-def test_general_vl_model_turns_off_thinking(monkeypatch) -> None:
+def test_understand_image_has_no_ocr_pixel_caps_on_37(monkeypatch) -> None:
+    _enable_qwen(monkeypatch)
+    captured: dict = {}
+
+    class FakeResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            return {"choices": [{"message": {"content": '{"party_a":"甲","still_needed":["party_b"]}'}}]}
+
+    def fake_post(_url: str, **kwargs):
+        captured["json"] = kwargs["json"]
+        return FakeResponse()
+
+    monkeypatch.setattr("app.services.qwen_ocr.httpx.post", fake_post)
+    understand_page(already=fields_from_llm_payload({}), image_jpeg=b"abc")
+    content = captured["json"]["messages"][0]["content"]
+    images = [item for item in content if item.get("type") == "image_url"]
+    assert len(images) == 1
+    assert "max_pixels" not in images[0]
+    assert captured["json"]["enable_thinking"] is False
+    monkeypatch.setenv("QWEN_API_KEY", "")
+    get_settings.cache_clear()
+
+
+def test_ocr_model_override_still_sends_pixel_caps(monkeypatch) -> None:
     monkeypatch.setenv("QWEN_API_KEY", "sk-test")
-    monkeypatch.setenv("QWEN_OCR_MODEL", "qwen3.7-plus")
+    monkeypatch.setenv("QWEN_OCR_MODEL", "qwen3.5-ocr")
     get_settings.cache_clear()
     captured: dict = {}
 
@@ -229,17 +312,18 @@ def test_general_vl_model_turns_off_thinking(monkeypatch) -> None:
             return None
 
         def json(self) -> dict:
-            return {"choices": [{"message": {"content": "甲方：甲"}}]}
+            return {"choices": [{"message": {"content": "{}"}}]}
 
     def fake_post(_url: str, **kwargs):
         captured["json"] = kwargs["json"]
         return FakeResponse()
 
     monkeypatch.setattr("app.services.qwen_ocr.httpx.post", fake_post)
-    qwen_ocr_image(b"abc")
-    assert captured["json"]["enable_thinking"] is False
-    assert captured["json"]["model"] == "qwen3.7-plus"
-    monkeypatch.setenv("QWEN_OCR_MODEL", "qwen3.5-ocr")
+    understand_page(already=fields_from_llm_payload({}), image_jpeg=b"abc")
+    images = [item for item in captured["json"]["messages"][0]["content"] if item.get("type") == "image_url"]
+    assert images[0]["max_pixels"] == 32 * 32 * 1280
+    monkeypatch.setenv("QWEN_OCR_MODEL", "qwen3.7-plus")
+    monkeypatch.setenv("QWEN_API_KEY", "")
     get_settings.cache_clear()
 
 
@@ -250,20 +334,8 @@ def test_jpeg_for_ocr_caps_long_edge() -> None:
     assert max(out.size) <= MAX_IMAGE_SIDE
 
 
-def test_qwen_skipped_without_key() -> None:
-    text, error = qwen_ocr_image(b"abc")
-    assert text == ""
+def test_understand_skipped_without_key() -> None:
+    fields, needed, error = understand_page(already=fields_from_llm_payload({}), page_text="任意正文")
+    assert fields.contract_no == ""
+    assert needed == []
     assert error and "QWEN_API_KEY" in error
-
-
-def test_has_enough_draft_fields() -> None:
-    assert has_enough_draft_fields(extract_fields(COVER)) is True
-    assert (
-        has_enough_draft_fields(
-            extract_fields("甲方：星河科技有限公司\n乙方：本地运营主体\n合同总金额（元）：100")
-        )
-        is False
-    )
-    assert (
-        has_enough_draft_fields(extract_fields("发票代码：012001900104\n发票号码：12345678")) is True
-    )
