@@ -19,31 +19,32 @@ export default function ContractPaymentsPage() {
 
   return (
     <AppShell>
-      <PageHeader eyebrow="Contracts" title="回款" />
-      <p className="-mt-3 mb-5 text-body text-mid-gray">
-        合同房间里的到账流水。点合同名称可以回到那份合同继续登记。
-      </p>
+      <PageHeader
+        eyebrow="Contracts"
+        title="回款"
+        description="合同房间里的到账流水。点合同名称可以回到那份合同继续登记。"
+      />
 
-      <section className="mb-8 grid gap-2 sm:grid-cols-2">
-        <div className="ui-card p-5">
+      <section className="mb-8 grid gap-6 sm:grid-cols-2">
+        <div className="ui-card p-6">
           <p className="eyebrow">回款笔数</p>
-          <p className="stat-value mt-2">{rows.length}</p>
+          <p className="stat-value mt-3">{rows.length}</p>
         </div>
-        <div className="ui-card p-5">
+        <div className="ui-card p-6">
           <p className="eyebrow">回款合计</p>
-          <p className="stat-value mt-2">{money(total)}</p>
+          <p className="stat-value mt-3">{money(total)}</p>
         </div>
       </section>
 
-      <div className="ui-card overflow-hidden">
-        <table className="w-full text-left text-body">
-          <thead className="text-mid-gray">
+      <div className="ui-card overflow-x-auto">
+        <table className="ui-table">
+          <thead>
             <tr>
-              <th className="px-5 py-3 font-medium">到账日</th>
-              <th className="px-5 py-3 font-medium">合同</th>
-              <th className="px-5 py-3 font-medium">甲 / 乙</th>
-              <th className="px-5 py-3 font-medium">期次</th>
-              <th className="px-5 py-3 font-medium">金额</th>
+              <th>到账日</th>
+              <th>合同</th>
+              <th>甲 / 乙</th>
+              <th>期次</th>
+              <th>金额</th>
             </tr>
           </thead>
           <tbody>
@@ -55,19 +56,19 @@ export default function ContractPaymentsPage() {
               </tr>
             ) : (
               rows.map((row) => (
-                <tr key={row.id} className="border-t border-hairline">
-                  <td className="px-5 py-3">{row.received_at || "—"}</td>
-                  <td className="px-5 py-3">
+                <tr key={row.id}>
+                  <td>{row.received_at || "—"}</td>
+                  <td>
                     <Link href={`/contracts/${row.contract_id}?tab=payments`} className="font-medium hover:underline">
                       {row.contract_title}
                     </Link>
-                    <p className="text-[12px] text-mid-gray">{row.contract_no || `未编号 · ID ${row.contract_id}`}</p>
+                    <p className="mt-1 text-[12px] text-mid-gray">{row.contract_no || `未编号 · ID ${row.contract_id}`}</p>
                   </td>
-                  <td className="px-5 py-3">
+                  <td>
                     {row.party_a || "—"} / {row.party_b || "—"}
                   </td>
-                  <td className="px-5 py-3">{row.schedule_name || "—"}</td>
-                  <td className="px-5 py-3">{money(row.amount)}</td>
+                  <td>{row.schedule_name || "—"}</td>
+                  <td>{money(row.amount)}</td>
                 </tr>
               ))
             )}

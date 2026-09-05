@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { FilePreview } from "@/components/file-preview";
-import { Field, FormError, PageHeader } from "@/components/ui";
+import { EmptyHint, Field, FormError, PageHeader } from "@/components/ui";
 import { api, money } from "@/lib/api";
 import {
   CONTRACT_STATUS_LABEL,
@@ -100,20 +100,20 @@ export function ContractWorkspace({
       <PageHeader
         eyebrow="Contracts"
         title={contract.title}
+        description={`编号 ${contract.contract_no || "未编号（内部 ID " + contract.id + "）"} · 合同额 ${money(contract.amount)} · 已开票 ${money(contract.billed_amount)} · 已回款 ${money(contract.collected_amount)}`}
         action={
           <Link href={`/invoices/new?contract=${contractId}`} className="ui-btn ui-btn-primary">
             新建发票
           </Link>
         }
       />
-      <p className="-mt-3 mb-5 text-body text-mid-gray">
-        编号 {contract.contract_no || "未编号（内部 ID " + contract.id + "）"} · 合同额{" "}
-        {money(contract.amount)} · 已开票 {money(contract.billed_amount)} · 已回款{" "}
-        {money(contract.collected_amount)}
-      </p>
-      <FormError message={error} />
+      {error ? (
+        <div className="mb-6">
+          <FormError message={error} />
+        </div>
+      ) : null}
 
-      <div className="mb-5 flex flex-wrap gap-2">
+      <div className="mb-6 flex flex-wrap gap-3">
         {(
           [
             ["fields", "要素"],
@@ -134,7 +134,7 @@ export function ContractWorkspace({
       </div>
 
       {tab === "fields" ? (
-        <form onSubmit={saveFields} className="ui-card max-w-2xl space-y-4 p-5">
+        <form onSubmit={saveFields} className="ui-card max-w-2xl space-y-5 p-6">
           <Field label="合同名称">
             <input
               required
@@ -240,7 +240,7 @@ export function ContractWorkspace({
               className="ui-input"
             />
           </Field>
-          <div className="flex items-center gap-3 pt-2">
+          <div className="flex items-center gap-3 pt-3">
             <button type="submit" disabled={busy} className="ui-btn ui-btn-primary">
               保存要素
             </button>
@@ -252,20 +252,20 @@ export function ContractWorkspace({
       ) : null}
 
       {tab === "files" ? (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {files.length === 0 ? <p className="text-body text-mid-gray">还没有附件。请走上传解析。</p> : null}
           {files.map((item) => (
-            <article key={item.id} className="ui-card p-5">
+            <article key={item.id} className="ui-card p-6">
               <p className="font-medium text-ink">{item.original_name}</p>
-              <p className="mt-1 text-body text-mid-gray">
+              <p className="mt-2 text-body text-mid-gray">
                 {item.source === "scanned" ? "扫描件" : "电子 PDF"} · {item.doc_type} · {item.parse_status}
               </p>
               {item.error_message ? <p className="mt-2 text-body text-ember">{item.error_message}</p> : null}
               <FilePreview fileId={item.id} name={item.original_name} />
               {item.extracted_text ? (
-                <details className="mt-3">
+                <details className="mt-4">
                   <summary className="cursor-pointer text-body font-medium text-ink">识别出的文字</summary>
-                  <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap text-body text-mid-gray">
+                  <pre className="mt-3 max-h-48 overflow-auto whitespace-pre-wrap text-body text-mid-gray">
                     {item.extracted_text}
                   </pre>
                 </details>
@@ -276,34 +276,34 @@ export function ContractWorkspace({
       ) : null}
 
       {tab === "invoices" ? (
-        <div className="ui-card overflow-hidden">
-          <table className="w-full text-left text-body">
-            <thead className="text-mid-gray">
+        <div className="ui-card overflow-x-auto">
+          <table className="ui-table">
+            <thead>
               <tr>
-                <th className="px-5 py-3 font-medium">发票</th>
-                <th className="px-5 py-3 font-medium">代码 / 号码</th>
-                <th className="px-5 py-3 font-medium">金额</th>
+                <th>发票</th>
+                <th>代码 / 号码</th>
+                <th>金额</th>
               </tr>
             </thead>
             <tbody>
               {invoices.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="px-5 py-8 text-mid-gray">
-                    还没有发票。识别草稿会列在这里，也可以右上角新建。
+                  <td colSpan={3}>
+                    <EmptyHint>还没有发票。识别草稿会列在这里，也可以右上角新建。</EmptyHint>
                   </td>
                 </tr>
               ) : (
                 invoices.map((item) => (
-                  <tr key={item.id} className="border-t border-hairline">
-                    <td className="px-5 py-3">
+                  <tr key={item.id}>
+                    <td>
                       <Link href={`/invoices/${item.id}`} className="font-medium hover:underline">
                         {item.title}
                       </Link>
                     </td>
-                    <td className="px-5 py-3">
+                    <td>
                       {item.invoice_code || "—"} / {item.invoice_no}
                     </td>
-                    <td className="px-5 py-3">{money(item.amount, item.currency)}</td>
+                    <td>{money(item.amount, item.currency)}</td>
                   </tr>
                 ))
               )}
@@ -365,18 +365,18 @@ function PaymentsPanel({
   }
 
   return (
-    <div className="grid gap-5 lg:grid-cols-2">
-      <div className="ui-card p-5">
+    <div className="grid gap-6 lg:grid-cols-2">
+      <div className="ui-card p-6">
         <h3 className="heading-sm">回款计划</h3>
-        <p className="mt-2 text-body text-mid-gray">一次性会自动生成一期；分期在这里加期数。</p>
-        <ul className="mt-4 space-y-2">
+        <p className="mt-3 text-body text-mid-gray">一次性会自动生成一期；分期在这里加期数。</p>
+        <ul className="mt-5 space-y-2.5">
           {schedules.map((item) => (
-            <li key={item.id} className="rounded-[10px] bg-canvas px-3 py-2 text-body">
+            <li key={item.id} className="rounded-[10px] bg-canvas px-4 py-3 text-body">
               {item.period_no}. {item.name} · 计划 {money(item.amount)} · 已回 {money(item.collected_amount)}
             </li>
           ))}
         </ul>
-        <form onSubmit={addSchedule} className="mt-4 flex flex-wrap gap-2">
+        <form onSubmit={addSchedule} className="mt-5 flex flex-wrap gap-3">
           <input value={name} onChange={(e) => setName(e.target.value)} className="ui-input w-32" />
           <input
             type="number"
@@ -391,16 +391,16 @@ function PaymentsPanel({
           </button>
         </form>
       </div>
-      <div className="ui-card p-5">
+      <div className="ui-card p-6">
         <h3 className="heading-sm">实际回款</h3>
-        <ul className="mt-4 space-y-2">
+        <ul className="mt-5 space-y-2.5">
           {collections.map((item) => (
-            <li key={item.id} className="rounded-[10px] bg-canvas px-3 py-2 text-body">
+            <li key={item.id} className="rounded-[10px] bg-canvas px-4 py-3 text-body">
               {money(item.amount)} · {item.received_at || "未填日期"}
             </li>
           ))}
         </ul>
-        <form onSubmit={addCollection} className="mt-4 flex flex-wrap gap-2">
+        <form onSubmit={addCollection} className="mt-5 flex flex-wrap gap-3">
           <input
             type="number"
             step="0.01"

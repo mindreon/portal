@@ -20,7 +20,7 @@ export function StatusBadge({
   const label = (kind === "contract" ? CONTRACT_STATUS_LABEL : INVOICE_STATUS_LABEL)[value] ?? value;
   return (
     <span
-      className={`inline-block rounded-[18px] px-2 py-[2px] text-[12px] font-medium ${TONES[value] ?? "bg-canvas text-ink-soft"}`}
+      className={`inline-block rounded-[18px] px-2.5 py-1 text-[12px] font-medium ${TONES[value] ?? "bg-canvas text-ink-soft"}`}
     >
       {label}
     </span>

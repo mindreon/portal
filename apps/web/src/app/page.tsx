@@ -27,29 +27,30 @@ export default function HomePage() {
 
   return (
     <AppShell>
-      <PageHeader eyebrow="Workbench" title="工作台" />
-      <p className="-mt-3 mb-8 max-w-xl text-body text-mid-gray">
-        每个业务是一间独立的房间。先选模块进去做事；房间之间默认不相通，要用时再从这里或 ⌘K 跳过去。
-      </p>
+      <PageHeader
+        eyebrow="Workbench"
+        title="工作台"
+        description="每个业务是一间独立的房间。先选模块进去做事；房间之间默认不相通，要用时再从这里或 ⌘K 跳过去。"
+      />
 
-      <section className="grid gap-5 sm:grid-cols-2">
+      <section className="grid gap-6 sm:grid-cols-2">
         {MODULES.map((item) => (
-          <Link key={item.id} href={item.href} className="ui-card block p-5">
+          <Link key={item.id} href={item.href} className="ui-card block p-6">
             <p className="eyebrow">{item.hint}</p>
-            <h3 className="heading-sm mt-2">{item.name}</h3>
-            <p className="mt-2 text-body text-mid-gray">{item.summary}</p>
-            <p className="mt-5 text-body font-medium text-ink">进入 →</p>
+            <h3 className="heading-sm mt-3">{item.name}</h3>
+            <p className="mt-3 text-body text-mid-gray">{item.summary}</p>
+            <p className="mt-6 text-body font-medium text-ink">进入 →</p>
           </Link>
         ))}
       </section>
 
-      <section className="mt-12 grid gap-2 sm:grid-cols-3">
+      <section className="mt-8 grid gap-6 sm:grid-cols-3">
         <StatCard title="合同总数" value={String(contracts.length)} href="/contracts" />
         <StatCard title="履约中" value={String(activeContracts)} href="/contracts" />
         <StatCard title="待收款发票" value={String(unpaidInvoices)} href="/invoices" />
       </section>
 
-      <section className="mt-12 grid gap-5 lg:grid-cols-2">
+      <section className="mt-8 grid gap-6 lg:grid-cols-2">
         <RecentList
           title="合同"
           href="/contracts"
@@ -79,9 +80,9 @@ export default function HomePage() {
 
 function StatCard({ title, value, href }: { title: string; value: string; href: string }) {
   return (
-    <Link href={href} className="ui-card block p-5">
+    <Link href={href} className="ui-card block min-w-0 overflow-hidden p-6">
       <p className="eyebrow">{title}</p>
-      <p className="stat-value mt-2">{value}</p>
+      <p className="stat-value mt-3">{value}</p>
     </Link>
   );
 }
@@ -98,20 +99,20 @@ function RecentList({
   rows: { id: number; title: string; meta: string; href: string }[];
 }) {
   return (
-    <div className="ui-card p-5">
-      <div className="mb-4 flex items-end justify-between">
+    <div className="ui-card p-6">
+      <div className="mb-5 flex items-end justify-between gap-4">
         <h3 className="heading-sm">{title}</h3>
         <TextLink href={href}>查看全部</TextLink>
       </div>
       {rows.length === 0 ? (
         <p className="text-body text-mid-gray">{empty}</p>
       ) : (
-        <ul className="space-y-1">
+        <ul className="space-y-1.5">
           {rows.map((row) => (
             <li key={row.id}>
-              <Link href={row.href} className="block rounded-[10px] px-2 py-2 hover:bg-canvas">
+              <Link href={row.href} className="block rounded-[10px] px-3 py-3 hover:bg-canvas">
                 <p className="font-medium text-ink">{row.title}</p>
-                <p className="text-body text-mid-gray">{row.meta}</p>
+                <p className="mt-1 text-body text-mid-gray">{row.meta}</p>
               </Link>
             </li>
           ))}

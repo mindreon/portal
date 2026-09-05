@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
 import { LogoMark } from "@/components/logo";
-import { FormError } from "@/components/ui";
+import { Field, FormError } from "@/components/ui";
 import { api } from "@/lib/api";
 import type { AuthConfig } from "@/lib/types";
 
@@ -56,22 +56,24 @@ function LoginForm() {
   const devOn = Boolean(config?.dev_login_enabled);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-canvas px-4">
-      <div className="ui-card w-full max-w-md p-5">
-        <div className="mb-5 flex items-center gap-2">
+    <div className="flex min-h-screen items-center justify-center bg-canvas px-6 py-12">
+      <div className="ui-card w-full max-w-md p-8 sm:p-10">
+        <div className="mb-6 flex items-center gap-3">
           <LogoMark />
           <p className="eyebrow">Portal · Internal</p>
         </div>
         <h1 className="heading-display">欢迎回来</h1>
-        <p className="mt-3 text-body text-mid-gray">
+        <p className="mt-4 text-body text-mid-gray">
           正式环境用飞书进入。合同和发票是两套独立模块，登录后各走各的页面。
         </p>
 
-        <div className="mt-4">
-          <FormError message={error} />
-        </div>
+        {error ? (
+          <div className="mt-5">
+            <FormError message={error} />
+          </div>
+        ) : null}
 
-        <div className="mt-6 space-y-3">
+        <div className="mt-8 space-y-5">
           {feishuOn ? (
             <button type="button" onClick={loginFeishu} disabled={busy} className="ui-btn ui-btn-primary w-full">
               使用飞书登录
@@ -84,15 +86,14 @@ function LoginForm() {
           )}
 
           {devOn ? (
-            <form onSubmit={loginDev} className="space-y-3">
-              <label className="block text-body text-mid-gray">
-                开发登录显示名
+            <form onSubmit={loginDev} className="space-y-4">
+              <Field label="开发登录显示名">
                 <input
                   value={name}
                   onChange={(event) => setName(event.target.value)}
-                  className="ui-input mt-1.5"
+                  className="ui-input"
                 />
-              </label>
+              </Field>
               <button
                 type="submit"
                 disabled={busy}

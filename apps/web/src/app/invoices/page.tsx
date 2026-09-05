@@ -21,24 +21,22 @@ export default function InvoicesPage() {
       <PageHeader
         eyebrow="Invoices"
         title="发票"
+        description="独立模块。发票可以单独开，也可以在表单里选择关联某份合同。"
         action={
           <Link href="/invoices/new" className="ui-btn ui-btn-primary">
             新建发票
           </Link>
         }
       />
-      <p className="-mt-3 mb-5 text-body text-mid-gray">
-        独立模块。发票可以单独开，也可以在表单里选择关联某份合同。
-      </p>
 
-      <div className="ui-card overflow-hidden">
-        <table className="w-full text-left text-body">
-          <thead className="text-mid-gray">
+      <div className="ui-card overflow-x-auto">
+        <table className="ui-table">
+          <thead>
             <tr>
-              <th className="px-5 py-3 font-medium">发票</th>
-              <th className="px-5 py-3 font-medium">对方</th>
-              <th className="px-5 py-3 font-medium">金额</th>
-              <th className="px-5 py-3 font-medium">状态</th>
+              <th>发票</th>
+              <th>对方</th>
+              <th>金额</th>
+              <th>状态</th>
             </tr>
           </thead>
           <tbody>
@@ -50,16 +48,16 @@ export default function InvoicesPage() {
               </tr>
             ) : (
               rows.map((row) => (
-                <tr key={row.id} className="border-t border-hairline">
-                  <td className="px-5 py-3">
+                <tr key={row.id}>
+                  <td>
                     <Link href={`/invoices/${row.id}`} className="font-medium hover:underline">
                       {row.title}
                     </Link>
-                    <p className="text-[12px] text-mid-gray">{row.invoice_no}</p>
+                    <p className="mt-1 text-[12px] text-mid-gray">{row.invoice_no}</p>
                   </td>
-                  <td className="px-5 py-3">{row.counterparty}</td>
-                  <td className="px-5 py-3">{money(row.amount, row.currency)}</td>
-                  <td className="px-5 py-3">
+                  <td>{row.counterparty}</td>
+                  <td>{money(row.amount, row.currency)}</td>
+                  <td>
                     <StatusBadge kind="invoice" value={row.status} />
                   </td>
                 </tr>

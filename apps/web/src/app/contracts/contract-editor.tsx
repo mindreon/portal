@@ -99,7 +99,7 @@ export function ContractEditor({
   return (
     <AppShell>
       <PageHeader eyebrow="Contracts" title={contractId ? "编辑合同" : "新建合同"} />
-      <form onSubmit={onSubmit} className="ui-card max-w-2xl space-y-4 p-5">
+      <form onSubmit={onSubmit} className="ui-card max-w-2xl space-y-5 p-6">
         <FormError message={error} />
         <Field label="合同名称">
           <input required value={form.title} onChange={(e) => update("title", e.target.value)} className="ui-input" />
@@ -160,7 +160,7 @@ export function ContractEditor({
         <Field label="备注">
           <textarea value={form.notes} onChange={(e) => update("notes", e.target.value)} rows={4} className="ui-input" />
         </Field>
-        <div className="flex items-center gap-3 pt-2">
+        <div className="flex items-center gap-3 pt-3">
           <button type="submit" disabled={busy} className="ui-btn ui-btn-primary">
             保存
           </button>

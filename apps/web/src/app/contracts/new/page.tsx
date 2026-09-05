@@ -45,15 +45,16 @@ function NewContractForm() {
 
   return (
     <AppShell>
-      <PageHeader eyebrow="Contracts" title="新建合同" />
-      <p className="-mt-3 mb-5 max-w-2xl text-body text-mid-gray">
-        优先上传 PDF 或 zip，系统识别后再核对。没有扫描件时再手工填写。
-      </p>
+      <PageHeader
+        eyebrow="Contracts"
+        title="新建合同"
+        description="优先上传 PDF 或 zip，系统识别后再核对。没有扫描件时再手工填写。"
+      />
 
-      <form onSubmit={onUpload} className="ui-card max-w-2xl space-y-4 p-5">
+      <form onSubmit={onUpload} className="ui-card max-w-2xl space-y-5 p-6">
         <FormError message={error} />
         <label className="block text-body">
-          <span className="mb-1.5 block font-medium text-ink">PDF / zip</span>
+          <span className="mb-2 block font-medium text-ink">PDF / zip</span>
           <input
             type="file"
             accept=".pdf,.zip,application/pdf,application/zip"
@@ -63,7 +64,7 @@ function NewContractForm() {
           />
         </label>
         {files.length > 0 ? <p className="text-body text-mid-gray">已选 {files.length} 个文件</p> : null}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-3">
           <button type="submit" disabled={busy} className="ui-btn ui-btn-primary">
             {busy ? "正在解析…" : "开始解析"}
           </button>
@@ -74,7 +75,7 @@ function NewContractForm() {
       </form>
 
       {result ? (
-        <section className="mt-8 space-y-3">
+        <section className="mt-8 space-y-4">
           <h3 className="heading-sm">识别结果</h3>
           {result.warning_text ? (
             <p className="whitespace-pre-wrap text-body text-mid-gray">{result.warning_text}</p>
@@ -83,17 +84,17 @@ function NewContractForm() {
             <p className="text-body text-mid-gray">没有新建合同。若提示内容相同，说明这份文件已经在库里。</p>
           ) : null}
           {result.contracts.map((item) => (
-            <Link key={item.id} href={`/contracts/${item.id}`} className="ui-card block p-5">
+            <Link key={item.id} href={`/contracts/${item.id}`} className="ui-card block p-6">
               <p className="eyebrow">{item.contract_no ?? "未编号"}</p>
-              <p className="mt-1 font-medium text-ink">{item.title}</p>
-              <p className="mt-1 text-body text-mid-gray">
+              <p className="mt-2 font-medium text-ink">{item.title}</p>
+              <p className="mt-2 text-body text-mid-gray">
                 {item.party_a || "甲方待填"} · {item.party_b || "乙方待填"}
               </p>
-              <p className="mt-3 text-body font-medium text-ink">去核对 →</p>
+              <p className="mt-5 text-body font-medium text-ink">去核对 →</p>
             </Link>
           ))}
           {result.files.map((item) => (
-            <article key={item.id} className="ui-card p-5">
+            <article key={item.id} className="ui-card p-6">
               <p className="font-medium text-ink">{item.original_name}</p>
               <FilePreview fileId={item.id} name={item.original_name} />
             </article>

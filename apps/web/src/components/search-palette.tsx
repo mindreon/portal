@@ -90,9 +90,9 @@ export function SearchPalette() {
               placeholder="跳转到模块，或按名称搜索"
               className="ui-input"
             />
-            <ul className="mt-3 max-h-80 overflow-auto">
+            <ul className="mt-4 max-h-80 overflow-auto">
               {hits.length === 0 ? (
-                <li className="px-2 py-3 text-body text-mid-gray">没有匹配项</li>
+                <li className="px-3 py-4 text-body text-mid-gray">没有匹配项</li>
               ) : (
                 hits.map((hit) => (
                   <li key={`${hit.href}-${hit.title}`}>

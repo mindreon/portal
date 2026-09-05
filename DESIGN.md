@@ -63,7 +63,7 @@ All interface text. Body 14px/400, headings 24–48px/600, buttons 13–14px/500
 
 ## 4. Spacing & Shapes
 
-**Base unit:** 4px · **Density:** compact
+**Base unit:** 4px · **Density:** comfortable（内部工作台要留出阅读空间，不要挤成仪表盘）
 
 | Name | Value | Token |
 |------|-------|-------|
@@ -73,6 +73,7 @@ All interface text. Body 14px/400, headings 24–48px/600, buttons 13–14px/500
 | 16 | 16px | `--spacing-16` |
 | 20 | 20px | `--spacing-20` |
 | 24 | 24px | `--spacing-24` |
+| 32 | 32px | `--spacing-32` |
 | 48 | 48px | `--spacing-48` |
 
 | Element | Radius |
@@ -86,7 +87,9 @@ All interface text. Body 14px/400, headings 24–48px/600, buttons 13–14px/500
 **Filled button:** no shadow  
 **Input focus:** 1px `#e5e5e5` ring, no offset
 
-**Layout:** max-width 1280px · card padding 20px · element gap 8px
+**Layout:** max-width 1280px · sidebar 264px · page padding 40px · card padding 24px · control gap 12px · section gap 32px  
+**Controls:** button/input height 40px · input padding 10px 14px · table cell 14px 24px  
+**Stats:** 金额类数字用 `clamp(24px, 2vw, 30px)`，宽屏四列、中屏两列，避免把卡片撑破
 
 ---
 
@@ -119,7 +122,8 @@ All interface text. Body 14px/400, headings 24–48px/600, buttons 13–14px/500
 2. **进入模块后**：侧栏只显示这个模块的子功能（例如合同里的「全部合同 / 新建合同」）。左上角「全部模块」回到大厅。
 3. **跨模块**：默认不相通。要从发票跳到某份合同，用页面上的明确链接，或顶栏 `⌘K`。
 4. **侧栏只两层**：模块 → 子功能。第三层用页签或页面分区，不要再往侧栏加缩进。
-5. **新模块只改一处**：`apps/web/src/lib/modules.ts`。侧栏、工作台格子、面包屑、搜索捷径都读这张表。
+5. **窄屏**：小于 1024px 时不要把整条侧栏叠在内容上面。顶栏只留 Logo 和退出，下面用横滑 chips 切换工作台 / 子功能。
+6. **新模块只改一处**：`apps/web/src/lib/modules.ts`。侧栏、工作台格子、面包屑、搜索捷径都读这张表。
 
 合同房间子功能：全部合同、回款。新建合同在列表右上角，默认上传 PDF，也可以改手工填写。点进某份合同后，用页签看要素 / 附件 / 发票 / 回款。
 
