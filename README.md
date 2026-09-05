@@ -89,7 +89,11 @@ Caddy、Postgres、Node、uv 都走公司 Harbor 镜像。当前没有旧库数�
 
 ## 本地开发（不用 Docker）
 
-后端用 [uv](https://docs.astral.sh/uv/) 管理 Python 依赖，前端用 npm。
+后端用 [uv](https://docs.astral.sh/uv/) 管理 Python 依赖，前端用 npm。Python 包默认从阿里云镜像安装（`https://mirrors.aliyun.com/pypi/simple`）。本机若还没装 uv，可以用同一镜像：
+
+```bash
+python3 -m pip install -U uv -i https://mirrors.aliyun.com/pypi/simple
+```
 
 ```bash
 # 后端
