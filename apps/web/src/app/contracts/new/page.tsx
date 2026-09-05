@@ -6,7 +6,7 @@ import { Suspense, useState } from "react";
 
 import { ContractEditor } from "../contract-editor";
 import { AppShell } from "@/components/app-shell";
-import { FilePreview } from "@/components/file-preview";
+import { FileActions, FilePreview } from "@/components/file-preview";
 import { FormError, PageHeader } from "@/components/ui";
 import { uploadFiles } from "@/lib/api";
 import type { ImportBatch } from "@/lib/types";
@@ -95,7 +95,10 @@ function NewContractForm() {
           ))}
           {result.files.map((item) => (
             <article key={item.id} className="ui-card p-6">
-              <p className="font-medium text-ink">{item.original_name}</p>
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <p className="min-w-0 font-medium text-ink">{item.original_name}</p>
+                <FileActions fileId={item.id} />
+              </div>
               <FilePreview fileId={item.id} name={item.original_name} />
             </article>
           ))}
