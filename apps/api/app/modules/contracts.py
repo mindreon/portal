@@ -57,6 +57,16 @@ def _load(db: Session, contract_id: int) -> Contract | None:
     ).first()
 
 
+def _schedule_for_contract(db: Session, contract_id: int, schedule_id: int | None) -> PaymentSchedule | None:
+    """登记到账时可以挂到某一期；必须是这份合同自己的期次。"""
+    if schedule_id is None:
+        return None
+    row = db.get(PaymentSchedule, schedule_id)
+    if row is None or row.contract_id != contract_id:
+        raise HTTPException(status_code=400, detail="回款期次不存在")
+    return row
+
+
 def _apply(contract: Contract, payload: ContractIn) -> None:
     if payload.status not in CONTRACT_STATUSES:
         raise HTTPException(status_code=400, detail="合同状态不合法")
@@ -342,10 +352,28 @@ def add_collection(
 ) -> Collection:
     if db.get(Contract, contract_id) is None:
         raise HTTPException(status_code=404, detail="合同不存在")
-    if payload.schedule_id and db.get(PaymentSchedule, payload.schedule_id) is None:
-        raise HTTPException(status_code=400, detail="回款期次不存在")
+    _schedule_for_contract(db, contract_id, payload.schedule_id)
     row = Collection(contract_id=contract_id, **payload.model_dump())
     db.add(row)
+    db.commit()
+    db.refresh(row)
+    return row
+
+
+@router.put("/{contract_id}/collections/{collection_id}", response_model=CollectionOut)
+def update_collection(
+    contract_id: int,
+    collection_id: int,
+    payload: CollectionIn,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> Collection:
+    row = db.get(Collection, collection_id)
+    if row is None or row.contract_id != contract_id:
+        raise HTTPException(status_code=404, detail="回款记录不存在")
+    _schedule_for_contract(db, contract_id, payload.schedule_id)
+    for key, value in payload.model_dump().items():
+        setattr(row, key, value)
     db.commit()
     db.refresh(row)
     return row

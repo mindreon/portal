@@ -324,6 +324,214 @@ export function ContractWorkspace({
   );
 }
 
+function localToday(): string {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
+function RowActions({
+  onEdit,
+  onDelete,
+}: {
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <span className="flex shrink-0 items-center gap-3">
+      <button type="button" onClick={onEdit} className="text-body font-medium text-ink underline-offset-4 hover:underline">
+        编辑
+      </button>
+      <button
+        type="button"
+        onClick={onDelete}
+        className="text-body font-medium text-ember underline-offset-4 hover:underline"
+      >
+        删除
+      </button>
+    </span>
+  );
+}
+
+function ScheduleRow({
+  item,
+  contractId,
+  onChanged,
+  onError,
+}: {
+  item: PaymentSchedule;
+  contractId: number;
+  onChanged: () => Promise<void>;
+  onError: (message: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(item.name);
+  const [amount, setAmount] = useState(item.amount);
+
+  useEffect(() => {
+    setName(item.name);
+    setAmount(item.amount);
+  }, [item.name, item.amount]);
+
+  async function save(event: React.FormEvent) {
+    event.preventDefault();
+    try {
+      await api(`/api/v1/contracts/${contractId}/schedules/${item.id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          name,
+          amount,
+          due_date: item.due_date,
+          notes: item.notes,
+        }),
+      });
+      setEditing(false);
+      await onChanged();
+    } catch (err) {
+      onError(err instanceof Error ? err.message : "保存失败");
+    }
+  }
+
+  async function remove() {
+    if (!window.confirm("确定删除这一期回款计划？若已经挂了发票或到账，需要先处理那些记录。")) return;
+    try {
+      await api(`/api/v1/contracts/${contractId}/schedules/${item.id}`, { method: "DELETE" });
+      await onChanged();
+    } catch (err) {
+      onError(err instanceof Error ? err.message : "删除失败");
+    }
+  }
+
+  return (
+    <li className="rounded-[10px] bg-canvas px-4 py-3 text-body">
+      {editing ? (
+        <form onSubmit={save} className="flex flex-wrap items-center gap-3">
+          <input value={name} onChange={(e) => setName(e.target.value)} className="ui-input w-32" required />
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="ui-input w-32"
+            required
+          />
+          <button type="submit" className="ui-btn ui-btn-primary">
+            保存
+          </button>
+          <button type="button" onClick={() => setEditing(false)} className="ui-btn ui-btn-secondary">
+            取消
+          </button>
+        </form>
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <span>
+            {item.period_no}. {item.name} · 计划 {money(item.amount)} · 已回 {money(item.collected_amount)}
+          </span>
+          <RowActions onEdit={() => setEditing(true)} onDelete={remove} />
+        </div>
+      )}
+    </li>
+  );
+}
+
+function CollectionRow({
+  item,
+  contractId,
+  schedules,
+  onChanged,
+  onError,
+}: {
+  item: Collection;
+  contractId: number;
+  schedules: PaymentSchedule[];
+  onChanged: () => Promise<void>;
+  onError: (message: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [amount, setAmount] = useState(item.amount);
+  const [receivedAt, setReceivedAt] = useState(item.received_at ?? "");
+  const [scheduleId, setScheduleId] = useState(item.schedule_id ? String(item.schedule_id) : "");
+  const scheduleName = schedules.find((row) => row.id === item.schedule_id)?.name;
+
+  useEffect(() => {
+    setAmount(item.amount);
+    setReceivedAt(item.received_at ?? "");
+    setScheduleId(item.schedule_id ? String(item.schedule_id) : "");
+  }, [item.amount, item.received_at, item.schedule_id]);
+
+  async function save(event: React.FormEvent) {
+    event.preventDefault();
+    try {
+      await api(`/api/v1/contracts/${contractId}/collections/${item.id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          amount,
+          received_at: receivedAt || null,
+          schedule_id: scheduleId ? Number(scheduleId) : null,
+          notes: item.notes,
+        }),
+      });
+      setEditing(false);
+      await onChanged();
+    } catch (err) {
+      onError(err instanceof Error ? err.message : "保存失败");
+    }
+  }
+
+  async function remove() {
+    if (!window.confirm("确定删除这笔到账？删除后合同已回款金额会重新计算。")) return;
+    try {
+      await api(`/api/v1/contracts/${contractId}/collections/${item.id}`, { method: "DELETE" });
+      await onChanged();
+    } catch (err) {
+      onError(err instanceof Error ? err.message : "删除失败");
+    }
+  }
+
+  return (
+    <li className="rounded-[10px] bg-canvas px-4 py-3 text-body">
+      {editing ? (
+        <form onSubmit={save} className="flex flex-wrap items-center gap-3">
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="ui-input w-32"
+            required
+          />
+          <input type="date" value={receivedAt} onChange={(e) => setReceivedAt(e.target.value)} className="ui-input w-40" />
+          <select value={scheduleId} onChange={(e) => setScheduleId(e.target.value)} className="ui-input w-40">
+            <option value="">不指定期次</option>
+            {schedules.map((row) => (
+              <option key={row.id} value={row.id}>
+                {row.name}
+              </option>
+            ))}
+          </select>
+          <button type="submit" className="ui-btn ui-btn-primary">
+            保存
+          </button>
+          <button type="button" onClick={() => setEditing(false)} className="ui-btn ui-btn-secondary">
+            取消
+          </button>
+        </form>
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <span>
+            {money(item.amount)} · {item.received_at || "未填日期"}
+            {scheduleName ? ` · ${scheduleName}` : ""}
+          </span>
+          <RowActions onEdit={() => setEditing(true)} onDelete={remove} />
+        </div>
+      )}
+    </li>
+  );
+}
+
 function PaymentsPanel({
   contractId,
   schedules,
@@ -338,89 +546,115 @@ function PaymentsPanel({
   const [name, setName] = useState("第二期");
   const [amount, setAmount] = useState("0");
   const [received, setReceived] = useState("0");
+  const [receivedAt, setReceivedAt] = useState(localToday);
   const [scheduleId, setScheduleId] = useState("");
+  const [error, setError] = useState("");
 
   async function addSchedule(event: React.FormEvent) {
     event.preventDefault();
-    await api(`/api/v1/contracts/${contractId}/schedules`, {
-      method: "POST",
-      body: JSON.stringify({ name, amount }),
-    });
-    setAmount("0");
-    await onChanged();
+    setError("");
+    try {
+      await api(`/api/v1/contracts/${contractId}/schedules`, {
+        method: "POST",
+        body: JSON.stringify({ name, amount }),
+      });
+      setAmount("0");
+      await onChanged();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "添加失败");
+    }
   }
 
   async function addCollection(event: React.FormEvent) {
     event.preventDefault();
-    await api(`/api/v1/contracts/${contractId}/collections`, {
-      method: "POST",
-      body: JSON.stringify({
-        amount: received,
-        received_at: new Date().toISOString().slice(0, 10),
-        schedule_id: scheduleId ? Number(scheduleId) : null,
-      }),
-    });
-    setReceived("0");
-    await onChanged();
+    setError("");
+    try {
+      await api(`/api/v1/contracts/${contractId}/collections`, {
+        method: "POST",
+        body: JSON.stringify({
+          amount: received,
+          received_at: receivedAt || null,
+          schedule_id: scheduleId ? Number(scheduleId) : null,
+        }),
+      });
+      setReceived("0");
+      await onChanged();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "登记失败");
+    }
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      <div className="ui-card p-6">
-        <h3 className="heading-sm">回款计划</h3>
-        <p className="mt-3 text-body text-mid-gray">一次性会自动生成一期；分期在这里加期数。</p>
-        <ul className="mt-5 space-y-2.5">
-          {schedules.map((item) => (
-            <li key={item.id} className="rounded-[10px] bg-canvas px-4 py-3 text-body">
-              {item.period_no}. {item.name} · 计划 {money(item.amount)} · 已回 {money(item.collected_amount)}
-            </li>
-          ))}
-        </ul>
-        <form onSubmit={addSchedule} className="mt-5 flex flex-wrap gap-3">
-          <input value={name} onChange={(e) => setName(e.target.value)} className="ui-input w-32" />
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="ui-input w-32"
-          />
-          <button type="submit" className="ui-btn ui-btn-secondary">
-            加一期
-          </button>
-        </form>
-      </div>
-      <div className="ui-card p-6">
-        <h3 className="heading-sm">实际回款</h3>
-        <ul className="mt-5 space-y-2.5">
-          {collections.map((item) => (
-            <li key={item.id} className="rounded-[10px] bg-canvas px-4 py-3 text-body">
-              {money(item.amount)} · {item.received_at || "未填日期"}
-            </li>
-          ))}
-        </ul>
-        <form onSubmit={addCollection} className="mt-5 flex flex-wrap gap-3">
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            value={received}
-            onChange={(e) => setReceived(e.target.value)}
-            className="ui-input w-32"
-          />
-          <select value={scheduleId} onChange={(e) => setScheduleId(e.target.value)} className="ui-input w-40">
-            <option value="">不指定期次</option>
+    <div className="space-y-6">
+      {error ? <FormError message={error} /> : null}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="ui-card p-6">
+          <h3 className="heading-sm">回款计划</h3>
+          <p className="mt-3 text-body text-mid-gray">一次性会自动生成一期；分期在这里加期数。输错了可以直接改或删。</p>
+          <ul className="mt-5 space-y-2.5">
             {schedules.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
+              <ScheduleRow
+                key={item.id}
+                item={item}
+                contractId={contractId}
+                onChanged={onChanged}
+                onError={setError}
+              />
             ))}
-          </select>
-          <button type="submit" className="ui-btn ui-btn-primary">
-            登记到账
-          </button>
-        </form>
+          </ul>
+          <form onSubmit={addSchedule} className="mt-5 flex flex-wrap gap-3">
+            <input value={name} onChange={(e) => setName(e.target.value)} className="ui-input w-32" />
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="ui-input w-32"
+            />
+            <button type="submit" className="ui-btn ui-btn-secondary">
+              加一期
+            </button>
+          </form>
+        </div>
+        <div className="ui-card p-6">
+          <h3 className="heading-sm">实际回款</h3>
+          <p className="mt-3 text-body text-mid-gray">金额、日期、期次都可以事后修改；删掉后已回款会重新汇总。</p>
+          <ul className="mt-5 space-y-2.5">
+            {collections.map((item) => (
+              <CollectionRow
+                key={item.id}
+                item={item}
+                contractId={contractId}
+                schedules={schedules}
+                onChanged={onChanged}
+                onError={setError}
+              />
+            ))}
+          </ul>
+          <form onSubmit={addCollection} className="mt-5 flex flex-wrap gap-3">
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={received}
+              onChange={(e) => setReceived(e.target.value)}
+              className="ui-input w-32"
+            />
+            <input type="date" value={receivedAt} onChange={(e) => setReceivedAt(e.target.value)} className="ui-input w-40" />
+            <select value={scheduleId} onChange={(e) => setScheduleId(e.target.value)} className="ui-input w-40">
+              <option value="">不指定期次</option>
+              {schedules.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+            <button type="submit" className="ui-btn ui-btn-primary">
+              登记到账
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );
