@@ -39,11 +39,11 @@ class Settings(BaseSettings):
     feishu_user_info_url: str = "https://open.feishu.cn/open-apis/authen/v1/user_info"
     upload_dir: str = "./data/uploads"
 
-    # 扫描件 OCR：只在电子 PDF 抽不出字时按页调用。不配 key 则无法自动识别。
-    # 地址是百炼 OpenAI 兼容接口（北京）。
+    # 扫描件 OCR：只在电子 PDF 抽不出字、草稿要素也不齐时按页调用。
+    # 默认用文档 OCR 模型；通用多模态更贵，可用 QWEN_OCR_MODEL 覆盖。
     qwen_api_key: str = ""
     qwen_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    qwen_ocr_model: str = "qwen3.7-plus"
+    qwen_ocr_model: str = "qwen3.5-ocr"
 
     @property
     def feishu_enabled(self) -> bool:

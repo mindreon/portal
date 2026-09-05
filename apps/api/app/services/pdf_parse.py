@@ -1,7 +1,11 @@
 """
-读 PDF 文字：能抽出字的走电子件；几乎没字的当扫描件。
+读 PDF 文字。能本地抽字就绝不调用模型。
 
-扫描件只走 Qwen，按页识别。草稿核心字段齐了就停，失败不回退。
+流程（越往下越贵）：
+1. 内容哈希相同 → 整份跳过（imports 里做，0 token）
+2. pypdf 抽电子字（0 token）
+3. 抽到的字已经够填草稿 → 当电子件，不上 OCR
+4. 字很少 → 当扫描件，按页 OCR；封面要素齐了就停
 """
 
 from __future__ import annotations
@@ -43,6 +47,9 @@ def parse_pdf_bytes(data: bytes) -> ParsedPdf:
         return ParsedPdf(text="", source="scanned", error=f"无法打开 PDF：{exc}")
 
     compact = "".join(text.split())
+    # 字少但要素已齐：多见于封面可提取、正文是图的混合件，不必再花 OCR。
+    if compact and has_enough_draft_fields(extract_fields(text)):
+        return ParsedPdf(text=text.strip(), source="electronic")
     if len(compact) >= SCAN_TEXT_THRESHOLD:
         return ParsedPdf(text=text.strip(), source="electronic")
 
@@ -55,7 +62,7 @@ def parse_pdf_bytes(data: bytes) -> ParsedPdf:
 
 
 def _ocr_pdf(data: bytes) -> tuple[str, str | None]:
-    """扫描件按页走 Qwen。失败不回退到其它 OCR。"""
+    """扫描件按页走 OCR。失败不回退到其它引擎。"""
     if not get_settings().qwen_ocr_enabled:
         return "", "未配置 QWEN_API_KEY，扫描件无法自动识别，请手工填写。"
 
