@@ -30,6 +30,32 @@ CONTRACT_DRAFT_KEYS = (
 )
 # 我方主体固定，用来从甲/乙名称自动判断角色，页面上不必再选手动选。
 OUR_COMPANY_MARKERS = ("迈能同行",)
+# 封面标题、保密条款里常见的空泛说法，不能当采购物。
+_GENERIC_SUBJECTS = {
+    "软件产品",
+    "软件",
+    "硬件",
+    "产品",
+    "服务",
+    "货物",
+    "设备",
+    "项目",
+    "系统",
+    "产品及服务",
+    "产品和服务",
+    "产品或服务",
+    "产品及或服务",
+    "软硬件",
+    "相关产品",
+    "相关服务",
+    "技术服务",
+    "销售",
+    "采购",
+    "信息技术服务",
+    "信息化建设",
+}
+_SUBJECT_COMPANY_MARKERS = ("有限公司", "股份有限", "集团有限", "医院", "大学")
+_SUBJECT_PUNCT_RE = re.compile(r"[\s、，,。；;：:：/／\\（）()【】\[\]\-—_]+")
 INVOICE_DRAFT_KEYS = ("invoice_code", "invoice_no", "invoices", "amount")
 KNOWN_STILL_NEEDED = set(CONTRACT_DRAFT_KEYS) | set(INVOICE_DRAFT_KEYS) | {"title"}
 
@@ -100,6 +126,79 @@ def parse_money(raw: str | None) -> Decimal | None:
         return None
 
 
+def _compact_subject(name: str) -> str:
+    return _SUBJECT_PUNCT_RE.sub("", name or "")
+
+
+def is_usable_subject_name(
+    name: str,
+    *,
+    party_a: str = "",
+    party_b: str = "",
+    title: str = "",
+) -> bool:
+    """具体货物/服务名称才算数；公司名、合同标题、保密套话都不要。"""
+    raw = (name or "").strip()
+    if len(raw) < 2:
+        return False
+    compact = _compact_subject(raw)
+    if not compact or compact in _GENERIC_SUBJECTS:
+        return False
+    if compact.endswith("合同") or compact.endswith("协议"):
+        return False
+    if "保密" in compact:
+        return False
+    if any(marker in compact for marker in _SUBJECT_COMPANY_MARKERS):
+        return False
+    title_compact = _compact_subject(title)
+    if title_compact and compact == title_compact:
+        return False
+    for party in (party_a, party_b):
+        party_compact = _compact_subject(party)
+        if party_compact and compact == party_compact:
+            return False
+    return True
+
+
+def normalize_subject_name(
+    name: str,
+    *,
+    party_a: str = "",
+    party_b: str = "",
+    title: str = "",
+) -> str:
+    cleaned = (name or "").strip()
+    if is_usable_subject_name(cleaned, party_a=party_a, party_b=party_b, title=title):
+        return cleaned
+    return ""
+
+
+def _subject_more_specific(incoming: str, current: str) -> bool:
+    """清单更长、分项更多，视为更像合同标的页，而不是封面四个字。"""
+    if incoming.count("、") > current.count("、"):
+        return True
+    return len(_compact_subject(incoming)) >= len(_compact_subject(current)) + 6
+
+
+def pick_subject_name(
+    current: str,
+    incoming: str,
+    *,
+    party_a: str = "",
+    party_b: str = "",
+    title: str = "",
+) -> tuple[str, bool]:
+    current_ok = is_usable_subject_name(current, party_a=party_a, party_b=party_b, title=title)
+    incoming_ok = is_usable_subject_name(incoming, party_a=party_a, party_b=party_b, title=title)
+    if incoming_ok and not current_ok:
+        return incoming.strip(), True
+    if incoming_ok and current_ok and incoming.strip() != current.strip() and _subject_more_specific(
+        incoming, current
+    ):
+        return incoming.strip(), True
+    return current, False
+
+
 def already_as_prompt_dict(fields: ExtractedFields) -> dict:
     """给下一页模型看：前面已经抽到了什么。"""
     return {
@@ -147,8 +246,13 @@ def fields_from_llm_payload(data: dict) -> ExtractedFields:
 
     result.party_a = str(data.get("party_a") or "").strip()
     result.party_b = str(data.get("party_b") or "").strip()
-    result.subject_name = str(data.get("subject_name") or "").strip()
     result.title = str(data.get("title") or "").strip()
+    result.subject_name = normalize_subject_name(
+        str(data.get("subject_name") or "").strip(),
+        party_a=result.party_a,
+        party_b=result.party_b,
+        title=result.title,
+    )
     result.amount = parse_money(_optional_str(data.get("amount")))
     result.signed_at = parse_date(_optional_str(data.get("signed_at")))
     result.start_date = parse_date(_optional_str(data.get("start_date")))
@@ -231,7 +335,16 @@ def merge_extracted_fields(base: ExtractedFields, incoming: ExtractedFields) -> 
     out.title = fill_str(out.title, incoming.title)
     out.party_a = fill_str(out.party_a, incoming.party_a)
     out.party_b = fill_str(out.party_b, incoming.party_b)
-    out.subject_name = fill_str(out.subject_name, incoming.subject_name)
+    picked, subject_added = pick_subject_name(
+        out.subject_name,
+        incoming.subject_name,
+        party_a=out.party_a,
+        party_b=out.party_b,
+        title=out.title,
+    )
+    if subject_added:
+        out.subject_name = picked
+        added = True
 
     if incoming.contract_no and incoming.contract_no != out.contract_no:
         if incoming.contract_no not in out.extra_contract_nos:
@@ -320,6 +433,16 @@ def extraction_complete(fields: ExtractedFields, still_needed: list[str] | None)
         if invoice_ok and not any(key in pending for key in INVOICE_DRAFT_KEYS):
             return True
 
+    looks_like_contract = fields.doc_type == "contract" or bool(
+        fields.party_a or fields.party_b or fields.contract_no
+    )
+    subject_ready = (not looks_like_contract) or is_usable_subject_name(
+        fields.subject_name,
+        party_a=fields.party_a,
+        party_b=fields.party_b,
+        title=fields.title,
+    )
+
     required_filled = bool(
         fields.contract_no
         and fields.party_a
@@ -328,13 +451,14 @@ def extraction_complete(fields: ExtractedFields, still_needed: list[str] | None)
         and fields.signed_at is not None
         and fields.start_date is not None
         and fields.end_date is not None
+        and subject_ready
     )
     if required_filled and "schedules" not in pending:
         return True
     if required_filled:
         return not pending
 
-    core = bool(fields.party_a and fields.party_b and fields.amount is not None)
+    core = bool(fields.party_a and fields.party_b and fields.amount is not None and subject_ready)
     if core and not pending:
         # 模型认为这份文件里本来就没有编号或日期，不必为找不到的字段读完整本附录。
         return True

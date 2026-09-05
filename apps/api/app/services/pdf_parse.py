@@ -19,6 +19,7 @@ from app.services.extract import (
     ExtractedFields,
     extraction_complete,
     finalize_fields,
+    is_usable_subject_name,
     merge_extracted_fields,
 )
 from app.services.qwen_ocr import MAX_PAGES, PdfRenderer, PdfRenderError, understand_page
@@ -107,7 +108,13 @@ def _understand_pdf(data: bytes, page_texts: list[str]) -> ParsedPdf:
             if extraction_complete(merged, still_needed):
                 logger.info("合同理解在第 %s 页后停止：草稿信息已齐", index + 1)
                 break
-            if not added and still_needed == []:
+            subject_ready = merged.doc_type == "invoice" or is_usable_subject_name(
+                merged.subject_name,
+                party_a=merged.party_a,
+                party_b=merged.party_b,
+                title=merged.title,
+            )
+            if not added and still_needed == [] and subject_ready:
                 logger.info("合同理解在第 %s 页后停止：本页无新字段且模型认为已齐", index + 1)
                 break
     finally:

@@ -77,6 +77,7 @@ def test_electronic_pages_understood_until_complete(monkeypatch) -> None:
                         "signed_at": "2026-01-01",
                         "start_date": "2026-01-01",
                         "end_date": "2026-12-31",
+                        "subject_name": "AI 调度软件",
                     }
                 ),
                 [],
@@ -92,6 +93,56 @@ def test_electronic_pages_understood_until_complete(monkeypatch) -> None:
     assert result.fields.amount is not None
     assert len(calls) == 2
     assert calls[1] and "第2页" in calls[1]
+
+
+def test_generic_cover_subject_keeps_reading_for_goods_list(monkeypatch) -> None:
+    """时序天成这类销售合同：封面常抽出公司名或「软件产品」，真正标的在后面清单页。"""
+    _enable_qwen(monkeypatch)
+    _pages(
+        monkeypatch,
+        [
+            "第1页软件产品销售合同，甲方医院，乙方北京时序天成技术有限公司，金额已写明，内容足够长。",
+            "第2页合同标的：AI调度软件、交换机、防火墙等设备，内容足够长。",
+            "第3页附录保密条款。",
+        ],
+    )
+    calls: list[str | None] = []
+
+    def fake_understand(*, already, page_text=None, image_jpeg=None):
+        calls.append(page_text)
+        if page_text and "第1页" in page_text:
+            return (
+                fields_from_llm_payload(
+                    {
+                        "doc_type": "contract",
+                        "contract_no": "HT-SXTC-1",
+                        "party_a": "哈尔滨医科大学附属第一医院",
+                        "party_b": "北京时序天成技术有限公司",
+                        "amount": "100000",
+                        "signed_at": "2026-01-01",
+                        "start_date": "2026-01-01",
+                        "end_date": "2026-12-31",
+                        "subject_name": "北京时序天成技术有限公司",
+                    }
+                ),
+                [],
+                None,
+            )
+        if page_text and "第2页" in page_text:
+            return (
+                fields_from_llm_payload(
+                    {"subject_name": "AI 调度软件、交换机、防火墙等设备"}
+                ),
+                [],
+                None,
+            )
+        raise AssertionError("标的已齐，不应再读保密附录")
+
+    monkeypatch.setattr("app.services.pdf_parse.understand_page", fake_understand)
+    result = parse_pdf_bytes(b"%PDF-fake")
+    assert result.fields.subject_name == "AI 调度软件、交换机、防火墙等设备"
+    assert result.fields.party_b == "北京时序天成技术有限公司"
+    assert len(calls) == 2
 
 
 def test_electronic_keeps_reading_for_payment_schedule(monkeypatch) -> None:
@@ -120,6 +171,7 @@ def test_electronic_keeps_reading_for_payment_schedule(monkeypatch) -> None:
                         "signed_at": "2026-01-01",
                         "start_date": "2026-01-01",
                         "end_date": "2026-12-31",
+                        "subject_name": "防火墙维保",
                     }
                 ),
                 ["schedules"],
@@ -162,6 +214,7 @@ def test_scanned_pages_use_image_and_stop_when_complete(monkeypatch) -> None:
                         "signed_at": "2026-01-01",
                         "start_date": "2026-01-01",
                         "end_date": "2026-12-31",
+                        "subject_name": "AI 调度软件",
                     }
                 ),
                 [],
@@ -193,7 +246,7 @@ def test_scanned_reads_next_page_when_number_still_needed(monkeypatch) -> None:
                 None,
             )
         if image_jpeg == b"page-2":
-            return fields_from_llm_payload({"contract_no": "HT-PAGE-2"}), [], None
+            return fields_from_llm_payload({"contract_no": "HT-PAGE-2", "subject_name": "交换机"}), [], None
         raise AssertionError("编号已找到，不应再看第3页")
 
     monkeypatch.setattr("app.services.pdf_parse.understand_page", fake_understand)
@@ -271,6 +324,8 @@ def test_understand_request_uses_37_and_disables_thinking(monkeypatch) -> None:
     prompt = next(item["text"] for item in content if item.get("type") == "text")
     assert "不要编造" in prompt
     assert "still_needed" in prompt
+    assert "合同标的" in prompt
+    assert "北京时序天成技术有限公司" in prompt
     monkeypatch.setenv("QWEN_API_KEY", "")
     get_settings.cache_clear()
 
