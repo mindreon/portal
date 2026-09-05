@@ -28,7 +28,18 @@ function NavLink({
       className={`block rounded-[18px] px-3.5 py-2.5 ${active ? "bg-paper font-medium text-ink" : "text-ink hover:bg-paper"}`}
     >
       <span className="block text-[14px]">{label}</span>
-      {hint ? <span className="block text-[12px] tracking-[0.6px] text-mid-gray uppercase">{hint}</span> : null}
+      {hint ? <span className="mt-0.5 block text-[12px] tracking-[0.6px] text-mid-gray uppercase">{hint}</span> : null}
+    </Link>
+  );
+}
+
+function ChipLink({ href, label, active }: { href: string; label: string; active: boolean }) {
+  return (
+    <Link
+      href={href}
+      className={`shrink-0 rounded-[18px] px-3.5 py-2 text-[14px] ${active ? "bg-ink font-medium text-[#fafafa]" : "bg-canvas text-ink"}`}
+    >
+      {label}
     </Link>
   );
 }
@@ -53,7 +64,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-canvas lg:grid lg:grid-cols-[264px_minmax(0,1fr)]">
-      <aside className="flex flex-col bg-surface-alt px-6 py-8 lg:min-h-screen">
+      <aside className="hidden flex-col bg-surface-alt px-6 py-8 lg:flex lg:min-h-screen">
         <Link href="/" className="inline-block">
           <LogoLockup />
         </Link>
@@ -94,7 +105,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
       </aside>
+
       <div className="flex min-w-0 flex-col">
+        <div className="flex items-center justify-between gap-4 px-6 py-4 lg:hidden">
+          <Link href="/">
+            <LogoLockup />
+          </Link>
+          <button type="button" onClick={logout} className="text-body font-medium text-ink underline-offset-4 hover:underline">
+            退出
+          </button>
+        </div>
+        <nav className="flex gap-2 overflow-x-auto px-6 pb-3 lg:hidden">
+          <ChipLink href="/" label="工作台" active={pathname === "/"} />
+          {current
+            ? current.features.map((feature) => (
+                <ChipLink
+                  key={feature.href}
+                  href={feature.href}
+                  label={feature.label}
+                  active={isFeatureActive(pathname, feature, current.features)}
+                />
+              ))
+            : MODULES.map((item) => <ChipLink key={item.id} href={item.href} label={item.name} active={false} />)}
+        </nav>
         <header className="flex flex-wrap items-center justify-between gap-4 px-6 py-5 sm:px-10">
           <Breadcrumbs />
           <SearchPalette />

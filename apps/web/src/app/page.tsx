@@ -80,7 +80,7 @@ export default function HomePage() {
 
 function StatCard({ title, value, href }: { title: string; value: string; href: string }) {
   return (
-    <Link href={href} className="ui-card block p-6">
+    <Link href={href} className="ui-card block min-w-0 overflow-hidden p-6">
       <p className="eyebrow">{title}</p>
       <p className="stat-value mt-3">{value}</p>
     </Link>

@@ -51,7 +51,7 @@ export default function ContractsPage() {
         }
       />
 
-      <section className="mb-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="mb-8 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
         <StatBlock label="合同总数" value={String(summary?.count ?? 0)} />
         <StatBlock label="履约中" value={String(summary?.active_count ?? 0)} />
         <StatBlock label="合同总额" value={money(summary?.total_amount ?? 0)} />
@@ -76,21 +76,23 @@ export default function ContractsPage() {
           <span className="mb-2 block font-medium text-ink">结束日期</span>
           <input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} className="ui-input" />
         </label>
-        <button type="submit" className="ui-btn ui-btn-primary">
-          筛选
-        </button>
-        <button
-          type="button"
-          className="ui-btn ui-btn-secondary"
-          onClick={() => {
-            setParty("");
-            setDateFrom("");
-            setDateTo("");
-            load("", "", "").catch(() => undefined);
-          }}
-        >
-          重置
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <button type="submit" className="ui-btn ui-btn-primary">
+            筛选
+          </button>
+          <button
+            type="button"
+            className="ui-btn ui-btn-secondary"
+            onClick={() => {
+              setParty("");
+              setDateFrom("");
+              setDateTo("");
+              load("", "", "").catch(() => undefined);
+            }}
+          >
+            重置
+          </button>
+        </div>
       </form>
 
       <div className="ui-card overflow-x-auto">
@@ -154,9 +156,9 @@ export default function ContractsPage() {
 
 function StatBlock({ label, value }: { label: string; value: string }) {
   return (
-    <div className="ui-card p-6">
+    <div className="ui-card min-w-0 overflow-hidden p-6">
       <p className="eyebrow">{label}</p>
-      <p className="stat-value mt-3">{value}</p>
+      <p className="stat-value mt-3 break-words">{value}</p>
     </div>
   );
 }

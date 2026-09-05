@@ -129,10 +129,10 @@ a {
 }
 
 .stat-value {
-  font-size: 36px;
+  font-size: clamp(24px, 2vw, 30px);
   font-weight: 600;
-  line-height: 1.11;
-  letter-spacing: -0.9px;
+  line-height: 1.2;
+  letter-spacing: -0.75px;
   color: var(--color-ink);
 }
 
