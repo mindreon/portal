@@ -19,6 +19,7 @@ export type Contract = {
   party_b: string;
   our_role: string;
   counterparty: string;
+  subject_name: string;
   amount: string;
   currency: string;
   status: string;

@@ -121,7 +121,10 @@ export default function ContractsPage() {
                     <Link href={`/contracts/${row.id}`} className="font-medium hover:underline">
                       {row.title}
                     </Link>
-                    <p className="mt-1 text-[12px] text-mid-gray">{row.contract_no || `未编号 · ID ${row.id}`}</p>
+                    <p className="mt-1 text-[12px] text-mid-gray">
+                      {row.contract_no || `未编号 · ID ${row.id}`}
+                      {row.subject_name ? ` · ${row.subject_name}` : ""}
+                    </p>
                   </td>
                   <td>
                     {row.party_a || "—"} / {row.party_b || row.counterparty || "—"}

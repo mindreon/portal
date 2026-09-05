@@ -5,6 +5,7 @@ from app.services.extract import (
     ExtractedFields,
     ExtractedInvoice,
     ExtractedSchedule,
+    derive_our_role,
     extraction_complete,
     fields_from_llm_payload,
     finalize_fields,
@@ -32,6 +33,7 @@ def test_fields_from_llm_payload_types() -> None:
         }
     )
     assert fields.contract_no == "HT-2026-001"
+    assert fields.subject_name == ""
     assert fields.amount == Decimal("120000.00")
     assert fields.signed_at == date(2026, 1, 1)
     assert fields.start_date == date(2026, 1, 1)
@@ -116,3 +118,25 @@ def test_identity_with_contract_no_and_invoice() -> None:
     )
     assert grouping_key(fields.contract_no, 1) == "no:HT-2026-001"
     assert fields.invoices[0].invoice_code == "012001900104"
+
+
+def test_subject_name_from_payload_and_merge() -> None:
+    first = fields_from_llm_payload({"party_a": "甲", "subject_name": "AI 调度软件"})
+    assert first.subject_name == "AI 调度软件"
+    merged, added = merge_extracted_fields(first, fields_from_llm_payload({"subject_name": ""}))
+    assert added is False
+    assert merged.subject_name == "AI 调度软件"
+    filled, added = merge_extracted_fields(
+        fields_from_llm_payload({"party_a": "甲"}),
+        fields_from_llm_payload({"subject_name": "防火墙维保"}),
+    )
+    assert added is True
+    assert filled.subject_name == "防火墙维保"
+
+
+def test_derive_our_role_from_maineng_name() -> None:
+    assert derive_our_role("医大一", "深圳市迈能同行科技有限公司") == "party_b"
+    assert derive_our_role("迈能同行科技有限公司", "某医院") == "party_a"
+    assert derive_our_role("医大一", "时序天成") == ""
+    assert still_needed_from_payload({"still_needed": ["subject_name"]}) == ["subject_name"]
+

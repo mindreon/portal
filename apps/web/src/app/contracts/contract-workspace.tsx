@@ -10,7 +10,6 @@ import { EmptyHint, Field, FormError, PageHeader } from "@/components/ui";
 import { api, money } from "@/lib/api";
 import {
   CONTRACT_STATUS_LABEL,
-  OUR_ROLE_LABEL,
   type Collection,
   type Contract,
   type ContractFile,
@@ -167,18 +166,13 @@ export function ContractWorkspace({
               />
             </Field>
           </div>
-          <Field label="我方是">
-            <select
-              value={contract.our_role}
-              onChange={(e) => setContract({ ...contract, our_role: e.target.value })}
+          <Field label="产品 / 服务名称">
+            <input
+              value={contract.subject_name ?? ""}
+              onChange={(e) => setContract({ ...contract, subject_name: e.target.value })}
               className="ui-input"
-            >
-              {Object.entries(OUR_ROLE_LABEL).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
+              placeholder="甲方采购、或乙方向甲方销售的产品或服务"
+            />
           </Field>
           <div className="grid gap-4 sm:grid-cols-3">
             <Field label="合同总金额（元）">

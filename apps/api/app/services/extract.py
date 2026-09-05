@@ -21,12 +21,15 @@ CONTRACT_DRAFT_KEYS = (
     "contract_no",
     "party_a",
     "party_b",
+    "subject_name",
     "amount",
     "signed_at",
     "start_date",
     "end_date",
     "schedules",
 )
+# 我方主体固定，用来从甲/乙名称自动判断角色，页面上不必再选手动选。
+OUR_COMPANY_MARKERS = ("迈能同行",)
 INVOICE_DRAFT_KEYS = ("invoice_code", "invoice_no", "invoices", "amount")
 KNOWN_STILL_NEEDED = set(CONTRACT_DRAFT_KEYS) | set(INVOICE_DRAFT_KEYS) | {"title"}
 
@@ -53,6 +56,7 @@ class ExtractedFields:
     title: str = ""
     party_a: str = ""
     party_b: str = ""
+    subject_name: str = ""
     amount: Decimal | None = None
     signed_at: date | None = None
     start_date: date | None = None
@@ -103,6 +107,7 @@ def already_as_prompt_dict(fields: ExtractedFields) -> dict:
         "contract_no": fields.contract_no,
         "party_a": fields.party_a,
         "party_b": fields.party_b,
+        "subject_name": fields.subject_name,
         "amount": str(fields.amount) if fields.amount is not None else "",
         "signed_at": fields.signed_at.isoformat() if fields.signed_at else "",
         "start_date": fields.start_date.isoformat() if fields.start_date else "",
@@ -142,6 +147,7 @@ def fields_from_llm_payload(data: dict) -> ExtractedFields:
 
     result.party_a = str(data.get("party_a") or "").strip()
     result.party_b = str(data.get("party_b") or "").strip()
+    result.subject_name = str(data.get("subject_name") or "").strip()
     result.title = str(data.get("title") or "").strip()
     result.amount = parse_money(_optional_str(data.get("amount")))
     result.signed_at = parse_date(_optional_str(data.get("signed_at")))
@@ -199,6 +205,7 @@ def merge_extracted_fields(base: ExtractedFields, incoming: ExtractedFields) -> 
         title=base.title,
         party_a=base.party_a,
         party_b=base.party_b,
+        subject_name=base.subject_name,
         amount=base.amount,
         signed_at=base.signed_at,
         start_date=base.start_date,
@@ -224,6 +231,7 @@ def merge_extracted_fields(base: ExtractedFields, incoming: ExtractedFields) -> 
     out.title = fill_str(out.title, incoming.title)
     out.party_a = fill_str(out.party_a, incoming.party_a)
     out.party_b = fill_str(out.party_b, incoming.party_b)
+    out.subject_name = fill_str(out.subject_name, incoming.subject_name)
 
     if incoming.contract_no and incoming.contract_no != out.contract_no:
         if incoming.contract_no not in out.extra_contract_nos:
@@ -377,11 +385,31 @@ def identity_key(fields: ExtractedFields, file_id: int) -> str:
     return grouping_key(fields.contract_no, file_id)
 
 
+def name_is_our_company(name: str) -> bool:
+    """名称里出现「迈能同行」即视为我方，深圳市迈能同行科技有限公司及其简称都算。"""
+    compact = re.sub(r"[\s（）()]", "", name or "")
+    if not compact:
+        return False
+    return any(marker in compact for marker in OUR_COMPANY_MARKERS)
+
+
+def derive_our_role(party_a: str, party_b: str) -> str:
+    """我方公司名固定，甲/乙里哪边是迈能同行，角色就定下来。"""
+    a = name_is_our_company(party_a)
+    b = name_is_our_company(party_b)
+    if a and not b:
+        return "party_a"
+    if b and not a:
+        return "party_b"
+    return ""
+
+
 def derive_counterparty(party_a: str, party_b: str, our_role: str) -> str:
     """列表上的「对方」：己方是甲则对方是乙，反之亦然。"""
-    if our_role == "party_a":
+    role = our_role or derive_our_role(party_a, party_b)
+    if role == "party_a":
         return party_b or party_a
-    if our_role == "party_b":
+    if role == "party_b":
         return party_a or party_b
     return party_b or party_a or ""
 

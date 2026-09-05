@@ -25,3 +25,9 @@ def ensure_sqlite_columns() -> None:
             cols = {item["name"] for item in inspector.get_columns("import_batches")}
             if "affected_contract_ids" not in cols:
                 conn.execute(text("ALTER TABLE import_batches ADD COLUMN affected_contract_ids TEXT"))
+        if "contracts" in tables:
+            cols = {item["name"] for item in inspector.get_columns("contracts")}
+            if "subject_name" not in cols:
+                conn.execute(
+                    text("ALTER TABLE contracts ADD COLUMN subject_name VARCHAR(255) DEFAULT ''")
+                )

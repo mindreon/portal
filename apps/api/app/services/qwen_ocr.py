@@ -194,13 +194,14 @@ def _build_prompt(already: ExtractedFields) -> str:
         "规则：\n"
         "1. 只根据本页真实内容填写；本页没有或看不清的字段用空字符串或空数组，不要编造。\n"
         "2. 已有字段不要改成空；本页若有更完整的值可以填写。\n"
-        "3. 付款分期只在本页写明期次名称和百分比时填写。\n"
-        "4. still_needed 只列这份文件草稿还缺、而且从合同体例看应当存在的键。"
+        "3. subject_name 填甲方采购、或乙方向甲方销售的产品/服务名称，不要填公司名。\n"
+        "4. 付款分期只在本页写明期次名称和百分比时填写。\n"
+        "5. still_needed 只列这份文件草稿还缺、而且从合同体例看应当存在的键。"
         "若合同里本来就没有分期或日期，不要列入 still_needed。\n"
-        "5. 只输出一个 JSON 对象，不要 Markdown。\n"
+        "6. 只输出一个 JSON 对象，不要 Markdown。\n"
         "JSON 形状：\n"
         '{"doc_type":"contract|invoice|unknown","contract_no":"","party_a":"","party_b":"",'
-        '"amount":"","signed_at":"","start_date":"","end_date":"","title":"",'
+        '"subject_name":"","amount":"","signed_at":"","start_date":"","end_date":"","title":"",'
         '"invoices":[{"code":"","no":"","amount":""}],'
         '"schedules":[{"name":"","percent":0}],'
         '"still_needed":["party_a"]}'

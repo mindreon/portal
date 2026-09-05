@@ -26,7 +26,7 @@ from app.schemas.contract import (
     ScheduleIn,
     ScheduleOut,
 )
-from app.services.extract import derive_counterparty, normalize_contract_no
+from app.services.extract import derive_counterparty, derive_our_role, normalize_contract_no
 
 router = APIRouter(prefix="/contracts", tags=["contracts"])
 
@@ -66,6 +66,9 @@ def _apply(contract: Contract, payload: ContractIn) -> None:
     data["contract_no"] = normalize_contract_no(data.get("contract_no"))
     if not data["party_a"] and not data["party_b"] and data["counterparty"]:
         data["party_b"] = data["counterparty"]
+    inferred_role = derive_our_role(data["party_a"], data["party_b"])
+    if inferred_role:
+        data["our_role"] = inferred_role
     derived = derive_counterparty(data["party_a"], data["party_b"], data["our_role"])
     if derived:
         data["counterparty"] = derived
@@ -91,6 +94,7 @@ def list_contracts(
                 func.lower(Contract.party_a).like(needle),
                 func.lower(Contract.party_b).like(needle),
                 func.lower(Contract.counterparty).like(needle),
+                func.lower(Contract.subject_name).like(needle),
                 func.lower(Contract.title).like(needle),
             )
         )
