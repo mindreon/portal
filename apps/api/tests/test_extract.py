@@ -66,7 +66,20 @@ def test_extraction_complete_waits_for_missing_then_stops() -> None:
         }
     )
     assert extraction_complete(full, ["schedules"]) is False
-    assert extraction_complete(full, []) is True
+    assert extraction_complete(full, []) is False
+    full_with_subject = fields_from_llm_payload(
+        {
+            "contract_no": "HT-1",
+            "party_a": "甲",
+            "party_b": "乙",
+            "amount": "1",
+            "signed_at": "2026-01-01",
+            "start_date": "2026-01-01",
+            "end_date": "2026-12-31",
+            "subject_name": "AI 调度软件",
+        }
+    )
+    assert extraction_complete(full_with_subject, []) is True
 
 
 def test_extraction_complete_invoice() -> None:
@@ -79,9 +92,13 @@ def test_extraction_complete_invoice() -> None:
 
 
 def test_model_says_done_without_optional_dates() -> None:
-    fields = fields_from_llm_payload({"party_a": "甲", "party_b": "乙", "amount": "88"})
+    fields = fields_from_llm_payload(
+        {"party_a": "甲", "party_b": "乙", "amount": "88", "subject_name": "交换机"}
+    )
     assert extraction_complete(fields, []) is True
     assert extraction_complete(fields, ["signed_at"]) is False
+    without_subject = fields_from_llm_payload({"party_a": "甲", "party_b": "乙", "amount": "88"})
+    assert extraction_complete(without_subject, []) is False
 
 
 def test_still_needed_ignores_unknown_keys() -> None:
@@ -132,6 +149,32 @@ def test_subject_name_from_payload_and_merge() -> None:
     )
     assert added is True
     assert filled.subject_name == "防火墙维保"
+
+
+def test_reject_company_and_generic_subject_names() -> None:
+    party_a = "哈尔滨医科大学附属第一医院"
+    party_b = "北京时序天成技术有限公司"
+    assert (
+        fields_from_llm_payload(
+            {"party_a": party_a, "party_b": party_b, "subject_name": "北京时序天成技术有限公司"}
+        ).subject_name
+        == ""
+    )
+    assert fields_from_llm_payload({"subject_name": "软件产品"}).subject_name == ""
+    assert fields_from_llm_payload({"subject_name": "软件产品销售合同"}).subject_name == ""
+    assert fields_from_llm_payload({"subject_name": "产品及/或服务"}).subject_name == ""
+    assert (
+        fields_from_llm_payload({"subject_name": "乙方自有产品及/或服务将被视为保密信息"}).subject_name
+        == ""
+    )
+    goods = "AI 调度软件、交换机、防火墙等设备"
+    assert fields_from_llm_payload({"subject_name": goods}).subject_name == goods
+    upgraded, added = merge_extracted_fields(
+        fields_from_llm_payload({"subject_name": "软件产品"}),
+        fields_from_llm_payload({"subject_name": goods}),
+    )
+    assert added is True
+    assert upgraded.subject_name == goods
 
 
 def test_derive_our_role_from_maineng_name() -> None:
