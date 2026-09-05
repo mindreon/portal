@@ -44,12 +44,13 @@ docker compose down
 
 数据保存在项目目录下的 `data/postgres/` 和 `data/uploads/`，即使删除容器也不会丢失。清理数据前请先备份并删除对应目录。
 
-扫描件 OCR：电子 PDF 仍本地抽字。几乎没字的扫描件会按页调用百炼 `qwen3.7-plus`。在 `.env` 里同时填：
+合同文本处理尽量少花 token：电子 PDF 本地抽字；本地已经够填草稿（编号、甲乙方、金额）就不上模型。几乎没字的扫描件才按页调用百炼 `qwen3.5-ocr`，只抄要素行，封面齐了就停。在 `.env` 里同时填：
 
 - `QWEN_API_KEY`：百炼 API Key
 - `QWEN_BASE_URL`：`https://dashscope.aliyuncs.com/compatible-mode/v1`（北京；新加坡用 `https://dashscope-intl.aliyuncs.com/compatible-mode/v1`）
+- `QWEN_OCR_MODEL`：默认 `qwen3.5-ocr`。若要改回通用多模态，可写成 `qwen3.7-plus`
 
-封面已经够填草稿（编号、甲乙方、金额）就停，不再往后翻页。失败不会回退到其它引擎，请手工填写。识别结果仍是草稿，必须在页面上核对。
+失败不会回退到其它引擎，请手工填写。识别结果仍是草稿，必须在页面上核对。
 
 Caddy、Postgres、Node、uv 都走公司 Harbor 镜像。当前没有旧库数据，直接 `docker compose up -d --build` 即可。Postgres 18 要把目录挂到 `/var/lib/postgresql`（不是 16 用的 `/var/lib/postgresql/data`）。
 

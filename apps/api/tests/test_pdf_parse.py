@@ -1,7 +1,11 @@
+from io import BytesIO
+
+from PIL import Image
+
 from app.core.config import get_settings
 from app.services.extract import extract_fields, has_enough_draft_fields
 from app.services.pdf_parse import parse_pdf_bytes
-from app.services.qwen_ocr import qwen_ocr_image
+from app.services.qwen_ocr import MAX_IMAGE_SIDE, jpeg_for_ocr, qwen_ocr_image
 
 
 class _Page:
@@ -163,6 +167,21 @@ def test_scanned_pdf_without_qwen_key_does_not_ocr(monkeypatch) -> None:
     assert result.error and "QWEN_API_KEY" in result.error
 
 
+def test_short_electronic_text_with_fields_skips_ocr(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.services.pdf_parse.PdfReader",
+        lambda *_args, **_kwargs: _Reader([_Page(COVER)]),
+    )
+
+    def boom(*_args, **_kwargs):
+        raise AssertionError("草稿要素已齐，不应再走 OCR")
+
+    monkeypatch.setattr("app.services.pdf_parse._ocr_pdf", boom)
+    result = parse_pdf_bytes(b"%PDF-fake")
+    assert result.source == "electronic"
+    assert "HT-SCAN-1" in result.text
+
+
 def test_qwen_request_is_single_page_and_disables_thinking(monkeypatch) -> None:
     _enable_qwen(monkeypatch)
     captured: dict = {}
@@ -184,14 +203,51 @@ def test_qwen_request_is_single_page_and_disables_thinking(monkeypatch) -> None:
     assert error is None
     assert text == "合同编号：HT-SCAN-1"
     payload = captured["json"]
-    assert payload["model"] == "qwen3.7-plus"
-    assert payload["enable_thinking"] is False
+    assert payload["model"] == "qwen3.5-ocr"
+    assert payload["max_tokens"] == 400
+    assert "enable_thinking" not in payload
     assert captured["url"] == "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
     content = payload["messages"][0]["content"]
     images = [item for item in content if item.get("type") == "image_url"]
     assert len(images) == 1
+    assert images[0]["max_pixels"] == 32 * 32 * 1280
+    prompt = next(item["text"] for item in content if item.get("type") == "text")
+    assert "全部可见文字" not in prompt
+    assert "合同编号" in prompt
     monkeypatch.setenv("QWEN_API_KEY", "")
     get_settings.cache_clear()
+
+
+def test_general_vl_model_turns_off_thinking(monkeypatch) -> None:
+    monkeypatch.setenv("QWEN_API_KEY", "sk-test")
+    monkeypatch.setenv("QWEN_OCR_MODEL", "qwen3.7-plus")
+    get_settings.cache_clear()
+    captured: dict = {}
+
+    class FakeResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            return {"choices": [{"message": {"content": "甲方：甲"}}]}
+
+    def fake_post(_url: str, **kwargs):
+        captured["json"] = kwargs["json"]
+        return FakeResponse()
+
+    monkeypatch.setattr("app.services.qwen_ocr.httpx.post", fake_post)
+    qwen_ocr_image(b"abc")
+    assert captured["json"]["enable_thinking"] is False
+    assert captured["json"]["model"] == "qwen3.7-plus"
+    monkeypatch.setenv("QWEN_OCR_MODEL", "qwen3.5-ocr")
+    get_settings.cache_clear()
+
+
+def test_jpeg_for_ocr_caps_long_edge() -> None:
+    image = Image.new("RGB", (2000, 2800), "white")
+    jpeg = jpeg_for_ocr(image)
+    out = Image.open(BytesIO(jpeg))
+    assert max(out.size) <= MAX_IMAGE_SIDE
 
 
 def test_qwen_skipped_without_key() -> None:
