@@ -14,6 +14,7 @@ class ContractIn(BaseModel):
     party_b: str = Field(default="", max_length=255)
     our_role: str = Field(default="")
     counterparty: str = Field(default="", max_length=255)
+    subject_name: str = Field(default="", max_length=255)
     amount: Decimal = Field(default=Decimal("0"), ge=0)
     currency: str = Field(default="CNY", max_length=8)
     status: str = Field(default="draft")

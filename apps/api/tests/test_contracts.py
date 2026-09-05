@@ -111,3 +111,22 @@ def test_duplicate_contract_no(logged_in: TestClient) -> None:
     }
     assert logged_in.post("/api/v1/contracts", json=payload).status_code == 201
     assert logged_in.post("/api/v1/contracts", json=payload).status_code == 409
+
+
+def test_subject_name_and_inferred_our_role(logged_in: TestClient) -> None:
+    created = logged_in.post(
+        "/api/v1/contracts",
+        json={
+            "title": "软件产品销售合同",
+            "party_a": "医大一",
+            "party_b": "深圳市迈能同行科技有限公司",
+            "subject_name": "AI 调度软件",
+            "amount": "100000",
+            "status": "active",
+        },
+    )
+    assert created.status_code == 201
+    body = created.json()
+    assert body["subject_name"] == "AI 调度软件"
+    assert body["our_role"] == "party_b"
+    assert body["counterparty"] == "医大一"

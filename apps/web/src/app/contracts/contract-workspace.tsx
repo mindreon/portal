@@ -5,12 +5,11 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
-import { FilePreview } from "@/components/file-preview";
+import { FileActions, FilePreview } from "@/components/file-preview";
 import { EmptyHint, Field, FormError, PageHeader } from "@/components/ui";
 import { api, money } from "@/lib/api";
 import {
   CONTRACT_STATUS_LABEL,
-  OUR_ROLE_LABEL,
   type Collection,
   type Contract,
   type ContractFile,
@@ -167,18 +166,13 @@ export function ContractWorkspace({
               />
             </Field>
           </div>
-          <Field label="我方是">
-            <select
-              value={contract.our_role}
-              onChange={(e) => setContract({ ...contract, our_role: e.target.value })}
+          <Field label="产品 / 服务名称">
+            <input
+              value={contract.subject_name ?? ""}
+              onChange={(e) => setContract({ ...contract, subject_name: e.target.value })}
               className="ui-input"
-            >
-              {Object.entries(OUR_ROLE_LABEL).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
+              placeholder="甲方采购、或乙方向甲方销售的产品或服务"
+            />
           </Field>
           <div className="grid gap-4 sm:grid-cols-3">
             <Field label="合同总金额（元）">
@@ -256,20 +250,17 @@ export function ContractWorkspace({
           {files.length === 0 ? <p className="text-body text-mid-gray">还没有附件。请走上传解析。</p> : null}
           {files.map((item) => (
             <article key={item.id} className="ui-card p-6">
-              <p className="font-medium text-ink">{item.original_name}</p>
-              <p className="mt-2 text-body text-mid-gray">
-                {item.source === "scanned" ? "扫描件" : "电子 PDF"} · {item.doc_type} · {item.parse_status}
-              </p>
-              {item.error_message ? <p className="mt-2 text-body text-ember">{item.error_message}</p> : null}
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="font-medium text-ink">{item.original_name}</p>
+                  <p className="mt-2 text-body text-mid-gray">
+                    {item.source === "scanned" ? "扫描件" : "电子 PDF"} · {item.doc_type} · {item.parse_status}
+                  </p>
+                  {item.error_message ? <p className="mt-2 text-body text-ember">{item.error_message}</p> : null}
+                </div>
+                <FileActions fileId={item.id} />
+              </div>
               <FilePreview fileId={item.id} name={item.original_name} />
-              {item.extracted_text ? (
-                <details className="mt-4">
-                  <summary className="cursor-pointer text-body font-medium text-ink">识别出的文字</summary>
-                  <pre className="mt-3 max-h-48 overflow-auto whitespace-pre-wrap text-body text-mid-gray">
-                    {item.extracted_text}
-                  </pre>
-                </details>
-              ) : null}
             </article>
           ))}
         </div>

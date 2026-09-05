@@ -25,6 +25,7 @@ from app.services.extract import (
     ExtractedFields,
     build_schedules,
     derive_counterparty,
+    derive_our_role,
     identity_key,
     merge_extracted_fields,
     normalize_contract_no,
@@ -89,14 +90,16 @@ def _unzip_pdfs(zip_name: str, data: bytes) -> list[tuple[str, bytes]]:
 def _prepare_contract(payload: ExtractedFields, filename: str, owner_id: int, batch_id: int) -> Contract:
     party_a = payload.party_a
     party_b = payload.party_b
+    our_role = derive_our_role(party_a, party_b)
     title = payload.title or Path(filename).stem or "未编号合同"
     return Contract(
         title=title[:255],
         contract_no=normalize_contract_no(payload.contract_no),
         party_a=party_a,
         party_b=party_b,
-        our_role="",
-        counterparty=derive_counterparty(party_a, party_b, "") or "（待填写）",
+        our_role=our_role,
+        counterparty=derive_counterparty(party_a, party_b, our_role) or "（待填写）",
+        subject_name=(payload.subject_name or "")[:255],
         amount=payload.amount or 0,
         signed_at=payload.signed_at,
         start_date=payload.start_date,

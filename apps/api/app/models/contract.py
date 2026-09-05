@@ -20,6 +20,7 @@ class Contract(Base):
     party_b: Mapped[str] = mapped_column(String(255), default="")
     our_role: Mapped[str] = mapped_column(String(16), default="")  # party_a | party_b | ""
     counterparty: Mapped[str] = mapped_column(String(255), default="")
+    subject_name: Mapped[str] = mapped_column(String(255), default="")
     amount: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=0)
     currency: Mapped[str] = mapped_column(String(8), default="CNY")
     status: Mapped[str] = mapped_column(String(32), default="draft")

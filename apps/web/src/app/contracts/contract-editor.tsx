@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { Field, FormError, PageHeader } from "@/components/ui";
 import { api } from "@/lib/api";
-import { CONTRACT_STATUS_LABEL, OUR_ROLE_LABEL, type Contract } from "@/lib/types";
+import { CONTRACT_STATUS_LABEL, type Contract } from "@/lib/types";
 
 const EMPTY = {
   title: "",
@@ -15,6 +15,7 @@ const EMPTY = {
   party_b: "",
   our_role: "",
   counterparty: "",
+  subject_name: "",
   amount: "0",
   currency: "CNY",
   status: "draft",
@@ -46,6 +47,7 @@ export function ContractEditor({
         party_b: item.party_b,
         our_role: item.our_role,
         counterparty: item.counterparty,
+        subject_name: item.subject_name ?? "",
         amount: item.amount,
         currency: item.currency,
         status: item.status,
@@ -104,20 +106,9 @@ export function ContractEditor({
         <Field label="合同名称">
           <input required value={form.title} onChange={(e) => update("title", e.target.value)} className="ui-input" />
         </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="合同编号（可空）">
-            <input value={form.contract_no} onChange={(e) => update("contract_no", e.target.value)} className="ui-input" />
-          </Field>
-          <Field label="我方是">
-            <select value={form.our_role} onChange={(e) => update("our_role", e.target.value)} className="ui-input">
-              {Object.entries(OUR_ROLE_LABEL).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </div>
+        <Field label="合同编号（可空）">
+          <input value={form.contract_no} onChange={(e) => update("contract_no", e.target.value)} className="ui-input" />
+        </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="甲方主体">
             <input value={form.party_a} onChange={(e) => update("party_a", e.target.value)} className="ui-input" />
@@ -126,8 +117,13 @@ export function ContractEditor({
             <input value={form.party_b} onChange={(e) => update("party_b", e.target.value)} className="ui-input" />
           </Field>
         </div>
-        <Field label="对方名称（可不填，保存时按甲/乙和「我方是」推算）">
-          <input value={form.counterparty} onChange={(e) => update("counterparty", e.target.value)} className="ui-input" />
+        <Field label="产品 / 服务名称">
+          <input
+            value={form.subject_name}
+            onChange={(e) => update("subject_name", e.target.value)}
+            className="ui-input"
+            placeholder="甲方采购、或乙方向甲方销售的产品或服务"
+          />
         </Field>
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="金额">
