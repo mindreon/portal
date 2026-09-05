@@ -51,16 +51,16 @@ export default function ContractsPage() {
         }
       />
 
-      <section className="mb-8 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="mb-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <StatBlock label="合同总数" value={String(summary?.count ?? 0)} />
         <StatBlock label="履约中" value={String(summary?.active_count ?? 0)} />
         <StatBlock label="合同总额" value={money(summary?.total_amount ?? 0)} />
         <StatBlock label="待回款" value={money(summary?.outstanding_amount ?? 0)} />
       </section>
 
-      <form onSubmit={onFilter} className="ui-card mb-3 flex flex-wrap items-end gap-3 p-5">
+      <form onSubmit={onFilter} className="ui-card mb-6 flex flex-wrap items-end gap-4 p-6">
         <label className="min-w-[200px] flex-1 text-body">
-          <span className="mb-1.5 block font-medium text-ink">合同双方</span>
+          <span className="mb-2 block font-medium text-ink">合同双方</span>
           <input
             value={party}
             onChange={(event) => setParty(event.target.value)}
@@ -69,11 +69,11 @@ export default function ContractsPage() {
           />
         </label>
         <label className="text-body">
-          <span className="mb-1.5 block font-medium text-ink">开始日期</span>
+          <span className="mb-2 block font-medium text-ink">开始日期</span>
           <input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} className="ui-input" />
         </label>
         <label className="text-body">
-          <span className="mb-1.5 block font-medium text-ink">结束日期</span>
+          <span className="mb-2 block font-medium text-ink">结束日期</span>
           <input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} className="ui-input" />
         </label>
         <button type="submit" className="ui-btn ui-btn-primary">
@@ -93,16 +93,16 @@ export default function ContractsPage() {
         </button>
       </form>
 
-      <div className="ui-card overflow-hidden">
-        <table className="w-full text-left text-body">
-          <thead className="text-mid-gray">
+      <div className="ui-card overflow-x-auto">
+        <table className="ui-table">
+          <thead>
             <tr>
-              <th className="px-5 py-3 font-medium">合同</th>
-              <th className="px-5 py-3 font-medium">甲 / 乙</th>
-              <th className="px-5 py-3 font-medium">金额</th>
-              <th className="px-5 py-3 font-medium">已回款</th>
-              <th className="px-5 py-3 font-medium">状态</th>
-              <th className="px-5 py-3 font-medium">操作</th>
+              <th>合同</th>
+              <th>甲 / 乙</th>
+              <th>金额</th>
+              <th>已回款</th>
+              <th>状态</th>
+              <th>操作</th>
             </tr>
           </thead>
           <tbody>
@@ -114,23 +114,23 @@ export default function ContractsPage() {
               </tr>
             ) : (
               rows.map((row) => (
-                <tr key={row.id} className="border-t border-hairline">
-                  <td className="px-5 py-3">
+                <tr key={row.id}>
+                  <td>
                     <Link href={`/contracts/${row.id}`} className="font-medium hover:underline">
                       {row.title}
                     </Link>
-                    <p className="text-[12px] text-mid-gray">{row.contract_no || `未编号 · ID ${row.id}`}</p>
+                    <p className="mt-1 text-[12px] text-mid-gray">{row.contract_no || `未编号 · ID ${row.id}`}</p>
                   </td>
-                  <td className="px-5 py-3">
+                  <td>
                     {row.party_a || "—"} / {row.party_b || row.counterparty || "—"}
                   </td>
-                  <td className="px-5 py-3">{money(row.amount, row.currency)}</td>
-                  <td className="px-5 py-3">{money(row.collected_amount, row.currency)}</td>
-                  <td className="px-5 py-3">
+                  <td>{money(row.amount, row.currency)}</td>
+                  <td>{money(row.collected_amount, row.currency)}</td>
+                  <td>
                     <StatusBadge kind="contract" value={row.status} />
                   </td>
-                  <td className="px-5 py-3">
-                    <div className="flex flex-wrap gap-3">
+                  <td>
+                    <div className="flex flex-wrap gap-4">
                       <Link href={`/contracts/${row.id}`} className="font-medium underline-offset-4 hover:underline">
                         查看
                       </Link>
@@ -154,9 +154,9 @@ export default function ContractsPage() {
 
 function StatBlock({ label, value }: { label: string; value: string }) {
   return (
-    <div className="ui-card p-5">
+    <div className="ui-card p-6">
       <p className="eyebrow">{label}</p>
-      <p className="stat-value mt-2">{value}</p>
+      <p className="stat-value mt-3">{value}</p>
     </div>
   );
 }

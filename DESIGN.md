@@ -63,7 +63,7 @@ All interface text. Body 14px/400, headings 24–48px/600, buttons 13–14px/500
 
 ## 4. Spacing & Shapes
 
-**Base unit:** 4px · **Density:** compact
+**Base unit:** 4px · **Density:** comfortable（内部工作台要留出阅读空间，不要挤成仪表盘）
 
 | Name | Value | Token |
 |------|-------|-------|
@@ -73,6 +73,7 @@ All interface text. Body 14px/400, headings 24–48px/600, buttons 13–14px/500
 | 16 | 16px | `--spacing-16` |
 | 20 | 20px | `--spacing-20` |
 | 24 | 24px | `--spacing-24` |
+| 32 | 32px | `--spacing-32` |
 | 48 | 48px | `--spacing-48` |
 
 | Element | Radius |
@@ -86,7 +87,8 @@ All interface text. Body 14px/400, headings 24–48px/600, buttons 13–14px/500
 **Filled button:** no shadow  
 **Input focus:** 1px `#e5e5e5` ring, no offset
 
-**Layout:** max-width 1280px · card padding 20px · element gap 8px
+**Layout:** max-width 1280px · sidebar 264px · page padding 40px · card padding 24px · control gap 12px · section gap 32px  
+**Controls:** button/input height 40px · input padding 10px 14px · table cell 14px 24px
 
 ---
 

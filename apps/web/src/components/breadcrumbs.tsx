@@ -18,11 +18,11 @@ export function Breadcrumbs() {
   const crumbs = crumbsFor(pathname);
 
   return (
-    <nav aria-label="面包屑" className="flex flex-wrap items-center gap-1.5 text-body">
+    <nav aria-label="面包屑" className="flex flex-wrap items-center gap-2 text-body">
       {crumbs.map((crumb, index) => {
         const last = index === crumbs.length - 1;
         return (
-          <span key={`${crumb.label}-${index}`} className="flex items-center gap-1.5">
+          <span key={`${crumb.label}-${index}`} className="flex items-center gap-2">
             {index > 0 ? <Chevron /> : null}
             {crumb.href && !last ? (
               <Link href={crumb.href} className="text-mid-gray hover:text-ink">

@@ -13,7 +13,7 @@ export function FilePreview({ fileId, name }: { fileId: number; name: string }) 
   const downloadUrl = `/api/v1/contracts/imports/files/${fileId}/download`;
 
   return (
-    <div className="mt-3 space-y-3">
+    <div className="mt-4 space-y-4">
       {kind === "pdf" ? (
         <iframe
           title={name}

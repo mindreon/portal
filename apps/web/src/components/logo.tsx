@@ -9,7 +9,7 @@ export function LogoMark({ size = 28 }: { size?: number }) {
 
 export function LogoLockup() {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-3">
       <LogoMark />
       <div>
         <p className="eyebrow">Internal</p>
