@@ -279,6 +279,11 @@ textarea.ui-input {
 .ui-pinned-table .ui-table th,
 .ui-pinned-table .ui-table td {
   border-bottom: 1px solid var(--color-hairline);
+  background-color: var(--color-paper);
+}
+
+.ui-pinned-table .ui-table thead th {
+  background-color: var(--color-surface-alt);
 }
 
 .ui-pinned-table .ui-table tbody tr {
@@ -288,12 +293,14 @@ textarea.ui-input {
 .ui-table-pin {
   position: sticky;
   z-index: 2;
-  background: var(--color-paper);
+  background-color: #ffffff;
+  background-color: var(--color-paper);
 }
 
 .ui-pinned-table thead .ui-table-pin {
   z-index: 3;
-  background: var(--color-surface-alt);
+  background-color: #fafafa;
+  background-color: var(--color-surface-alt);
 }
 
 .ui-table-pin-edge-left {

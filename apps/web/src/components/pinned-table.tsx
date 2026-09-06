@@ -24,6 +24,7 @@ function clearPin(cell: HTMLElement) {
   cell.classList.remove(...PIN_CLASSES);
   cell.style.left = "";
   cell.style.right = "";
+  cell.style.backgroundColor = "";
 }
 
 /**
@@ -50,6 +51,7 @@ function pinRow(row: HTMLTableRowElement, pinLeft: number, pinRight: number) {
     cell.classList.add("ui-table-pin", "ui-table-pin-left");
     if (i === leftCount - 1) cell.classList.add("ui-table-pin-edge-left");
     cell.style.left = `${left}px`;
+    cell.style.backgroundColor = cell.tagName === "TH" ? "var(--color-surface-alt)" : "var(--color-paper)";
     left += widths[i];
   }
 
@@ -60,6 +62,7 @@ function pinRow(row: HTMLTableRowElement, pinLeft: number, pinRight: number) {
     cell.classList.add("ui-table-pin", "ui-table-pin-right");
     if (i === rightCount - 1) cell.classList.add("ui-table-pin-edge-right");
     cell.style.right = `${right}px`;
+    cell.style.backgroundColor = cell.tagName === "TH" ? "var(--color-surface-alt)" : "var(--color-paper)";
     right += widths[index];
   }
 }
