@@ -20,6 +20,7 @@ connect_args = {}
 engine_kwargs: dict = {"pool_pre_ping": True}
 if settings.database_url.startswith("sqlite"):
     connect_args["check_same_thread"] = False
+    connect_args["timeout"] = 30
     engine_kwargs["connect_args"] = connect_args
     # 内存库必须共用连接池，否则「建表」和「查询」会看到两份空库
     if settings.database_url in {"sqlite://", "sqlite:///:memory:"}:

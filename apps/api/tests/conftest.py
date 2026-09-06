@@ -16,7 +16,9 @@ os.environ.setdefault("QWEN_API_KEY", "")
 os.environ.setdefault("QWEN_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
 os.environ.setdefault("QWEN_OCR_MODEL", "qwen3.7-plus")
 
+import shutil
 from collections.abc import Generator
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -25,14 +27,27 @@ from app.core.config import get_settings
 from app.db.base import Base
 from app.db.session import engine
 from app.main import app
+from app.services.jobs import wait_all_imports
 
 
 @pytest.fixture(autouse=True)
 def reset_db() -> Generator[None, None, None]:
     get_settings.cache_clear()
+    try:
+        wait_all_imports(timeout=5)
+    except Exception:
+        pass
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
+    upload_dir = Path(os.environ["UPLOAD_DIR"])
+    if upload_dir.exists():
+        shutil.rmtree(upload_dir)
+    upload_dir.mkdir(parents=True, exist_ok=True)
     yield
+    try:
+        wait_all_imports(timeout=20)
+    except Exception:
+        pass
     Base.metadata.drop_all(bind=engine)
 
 

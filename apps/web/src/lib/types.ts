@@ -29,6 +29,8 @@ export type Contract = {
   notes: string | null;
   billed_amount: string;
   collected_amount: string;
+  source_filename: string | null;
+  parse_status: string;
   owner_id: number;
 };
 
@@ -110,6 +112,13 @@ export const CONTRACT_STATUS_LABEL: Record<string, string> = {
   active: "履约中",
   expired: "已到期",
   terminated: "已终止",
+};
+
+export const PARSE_STATUS_LABEL: Record<string, string> = {
+  pending: "待识别",
+  processing: "识别中",
+  done: "已识别",
+  failed: "识别失败",
 };
 
 export const INVOICE_STATUS_LABEL: Record<string, string> = {

@@ -50,7 +50,14 @@ export function SearchPalette() {
     const shortcuts = searchShortcuts();
     const pages = q ? shortcuts.filter((item) => match(q, item.title) || match(q, item.meta)) : shortcuts;
     const contractHits = contracts
-      .filter((item) => !q || match(q, item.title) || match(q, item.contract_no) || match(q, item.counterparty))
+      .filter(
+        (item) =>
+          !q ||
+          match(q, item.title) ||
+          match(q, item.contract_no) ||
+          match(q, item.counterparty) ||
+          match(q, item.source_filename),
+      )
       .slice(0, 6)
       .map((item) => ({
         href: `/contracts/${item.id}`,

@@ -31,6 +31,9 @@ async def lifespan(_app: FastAPI):
     """
     Base.metadata.create_all(bind=engine)
     ensure_sqlite_columns()
+    from app.services.jobs import resume_pending_imports
+
+    resume_pending_imports()
     yield
 
 
