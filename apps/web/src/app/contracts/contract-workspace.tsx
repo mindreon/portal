@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { FileActions, FilePreview } from "@/components/file-preview";
+import { PinnedTable } from "@/components/pinned-table";
 import { StatusBadge } from "@/components/status-badge";
 import { EmptyHint, Field, FormError, PageHeader } from "@/components/ui";
 import { api, money } from "@/lib/api";
@@ -290,40 +291,38 @@ export function ContractWorkspace({
       ) : null}
 
       {tab === "invoices" ? (
-        <div className="ui-card overflow-x-auto">
-          <table className="ui-table">
-            <thead>
+        <PinnedTable pinLeft={1} pinRight={1}>
+          <thead>
+            <tr>
+              <th>发票</th>
+              <th>代码 / 号码</th>
+              <th>金额</th>
+            </tr>
+          </thead>
+          <tbody>
+            {invoices.length === 0 ? (
               <tr>
-                <th>发票</th>
-                <th>代码 / 号码</th>
-                <th>金额</th>
+                <td colSpan={3}>
+                  <EmptyHint>还没有发票。识别草稿会列在这里，也可以右上角新建。</EmptyHint>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {invoices.length === 0 ? (
-                <tr>
-                  <td colSpan={3}>
-                    <EmptyHint>还没有发票。识别草稿会列在这里，也可以右上角新建。</EmptyHint>
+            ) : (
+              invoices.map((item) => (
+                <tr key={item.id}>
+                  <td>
+                    <Link href={`/invoices/${item.id}`} className="font-medium hover:underline">
+                      {item.title}
+                    </Link>
                   </td>
+                  <td>
+                    {item.invoice_code || "—"} / {item.invoice_no}
+                  </td>
+                  <td>{money(item.amount, item.currency)}</td>
                 </tr>
-              ) : (
-                invoices.map((item) => (
-                  <tr key={item.id}>
-                    <td>
-                      <Link href={`/invoices/${item.id}`} className="font-medium hover:underline">
-                        {item.title}
-                      </Link>
-                    </td>
-                    <td>
-                      {item.invoice_code || "—"} / {item.invoice_no}
-                    </td>
-                    <td>{money(item.amount, item.currency)}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+              ))
+            )}
+          </tbody>
+        </PinnedTable>
       ) : null}
 
       {tab === "payments" ? (

@@ -265,6 +265,45 @@ textarea.ui-input {
   line-height: 1.43;
 }
 
+/* 冻列：左右钉住，中间横滑。border-collapse:collapse 时 sticky 会失效，所以这里改 separate。 */
+.ui-pinned-table {
+  overflow-x: auto;
+}
+
+.ui-pinned-table .ui-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 100%;
+}
+
+.ui-pinned-table .ui-table th,
+.ui-pinned-table .ui-table td {
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.ui-pinned-table .ui-table tbody tr {
+  border-top: 0;
+}
+
+.ui-table-pin {
+  position: sticky;
+  z-index: 2;
+  background: var(--color-paper);
+}
+
+.ui-pinned-table thead .ui-table-pin {
+  z-index: 3;
+  background: var(--color-surface-alt);
+}
+
+.ui-table-pin-edge-left {
+  box-shadow: 8px 0 8px -8px rgba(0, 0, 0, 0.16);
+}
+
+.ui-table-pin-edge-right {
+  box-shadow: -8px 0 8px -8px rgba(0, 0, 0, 0.16);
+}
+
 .ui-table thead {
   background: var(--color-surface-alt);
   color: var(--color-mid-gray);

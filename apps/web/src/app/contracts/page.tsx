@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
+import { PinnedTable } from "@/components/pinned-table";
 import { StatusBadge } from "@/components/status-badge";
 import { EmptyHint, PageHeader } from "@/components/ui";
 import { api, money } from "@/lib/api";
@@ -120,75 +121,73 @@ export default function ContractsPage() {
         </div>
       </form>
 
-      <div className="ui-card overflow-x-auto">
-        <table className="ui-table">
-          <thead>
+      <PinnedTable pinLeft={1} pinRight={1} minWidth={1080}>
+        <thead>
+          <tr>
+            <th>文件名</th>
+            <th>合同</th>
+            <th>甲 / 乙</th>
+            <th>金额</th>
+            <th>已回款</th>
+            <th>状态</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.length === 0 ? (
             <tr>
-              <th>文件名</th>
-              <th>合同</th>
-              <th>甲 / 乙</th>
-              <th>金额</th>
-              <th>已回款</th>
-              <th>状态</th>
-              <th>操作</th>
+              <td colSpan={7}>
+                <EmptyHint>没有匹配的合同。可以点右上角新建，或放宽筛选。</EmptyHint>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr>
-                <td colSpan={7}>
-                  <EmptyHint>没有匹配的合同。可以点右上角新建，或放宽筛选。</EmptyHint>
+          ) : (
+            rows.map((row) => (
+              <tr key={row.id}>
+                <td>
+                  <Link href={`/contracts/${row.id}`} className="font-medium hover:underline">
+                    {fileLabel(row)}
+                  </Link>
+                  {row.source_filename && row.source_filename.includes("/") ? (
+                    <p className="mt-1 text-[12px] text-mid-gray">{row.source_filename}</p>
+                  ) : null}
+                </td>
+                <td>
+                  <p className="font-medium text-ink">{row.title}</p>
+                  <p className="mt-1 text-[12px] text-mid-gray">
+                    {row.contract_no || `未编号 · ID ${row.id}`}
+                    {row.subject_name ? ` · ${row.subject_name}` : ""}
+                  </p>
+                </td>
+                <td>
+                  {row.party_a || "—"} / {row.party_b || row.counterparty || "—"}
+                </td>
+                <td>{money(row.amount, row.currency)}</td>
+                <td>{money(row.collected_amount, row.currency)}</td>
+                <td>
+                  {isParsing(row.parse_status) || row.parse_status === "failed" ? (
+                    <StatusBadge kind="parse" value={row.parse_status} />
+                  ) : (
+                    <StatusBadge kind="contract" value={row.status} />
+                  )}
+                </td>
+                <td>
+                  <div className="flex flex-wrap gap-4">
+                    <Link href={`/contracts/${row.id}`} className="font-medium underline-offset-4 hover:underline">
+                      查看
+                    </Link>
+                    <Link
+                      href={`/contracts/${row.id}?tab=payments`}
+                      className="font-medium underline-offset-4 hover:underline"
+                    >
+                      回款
+                    </Link>
+                  </div>
                 </td>
               </tr>
-            ) : (
-              rows.map((row) => (
-                <tr key={row.id}>
-                  <td>
-                    <Link href={`/contracts/${row.id}`} className="font-medium hover:underline">
-                      {fileLabel(row)}
-                    </Link>
-                    {row.source_filename && row.source_filename.includes("/") ? (
-                      <p className="mt-1 text-[12px] text-mid-gray">{row.source_filename}</p>
-                    ) : null}
-                  </td>
-                  <td>
-                    <p className="font-medium text-ink">{row.title}</p>
-                    <p className="mt-1 text-[12px] text-mid-gray">
-                      {row.contract_no || `未编号 · ID ${row.id}`}
-                      {row.subject_name ? ` · ${row.subject_name}` : ""}
-                    </p>
-                  </td>
-                  <td>
-                    {row.party_a || "—"} / {row.party_b || row.counterparty || "—"}
-                  </td>
-                  <td>{money(row.amount, row.currency)}</td>
-                  <td>{money(row.collected_amount, row.currency)}</td>
-                  <td>
-                    {isParsing(row.parse_status) || row.parse_status === "failed" ? (
-                      <StatusBadge kind="parse" value={row.parse_status} />
-                    ) : (
-                      <StatusBadge kind="contract" value={row.status} />
-                    )}
-                  </td>
-                  <td>
-                    <div className="flex flex-wrap gap-4">
-                      <Link href={`/contracts/${row.id}`} className="font-medium underline-offset-4 hover:underline">
-                        查看
-                      </Link>
-                      <Link
-                        href={`/contracts/${row.id}?tab=payments`}
-                        className="font-medium underline-offset-4 hover:underline"
-                      >
-                        回款
-                      </Link>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+            ))
+          )}
+        </tbody>
+      </PinnedTable>
     </AppShell>
   );
 }
