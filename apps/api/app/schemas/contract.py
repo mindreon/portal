@@ -38,6 +38,8 @@ class ContractOut(ContractIn):
     owner_id: int
     billed_amount: Decimal = Decimal("0")
     collected_amount: Decimal = Decimal("0")
+    source_filename: str | None = None
+    parse_status: str = "done"
     created_at: datetime | None = None
     updated_at: datetime | None = None
 

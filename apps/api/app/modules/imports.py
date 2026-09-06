@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -11,7 +11,8 @@ from app.models.user import User
 from app.modules.contracts import _to_out
 from app.schemas.contract import ContractOut, FileOut
 from app.services.file_serve import original_file_response
-from app.services.imports import run_import
+from app.services.imports import import_needs_processing, run_import
+from app.services.jobs import enqueue_import
 
 router = APIRouter(prefix="/contracts/imports", tags=["contract-imports"])
 
@@ -26,6 +27,7 @@ class ImportOut(BaseModel):
 
 @router.post("", response_model=ImportOut, status_code=201)
 def create_import(
+    background: BackgroundTasks,
     files: list[UploadFile] = File(...),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
@@ -37,6 +39,9 @@ def create_import(
         batch = run_import(db, user, uploads)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    # 等这次请求把数据库连接还回去再开工，刷新页面也不会把识别掐掉。
+    if import_needs_processing(db, batch):
+        background.add_task(enqueue_import, batch.id)
     return _batch_out(db, batch.id)
 
 
@@ -106,7 +111,15 @@ def _batch_out(db: Session, batch_id: int) -> ImportOut:
     if batch is None:
         raise HTTPException(status_code=404, detail="导入批次不存在")
     affected = _parse_ids(batch.affected_contract_ids)
-    query = select(Contract).options(selectinload(Contract.invoices), selectinload(Contract.collections)).order_by(Contract.id)
+    query = (
+        select(Contract)
+        .options(
+            selectinload(Contract.invoices),
+            selectinload(Contract.collections),
+            selectinload(Contract.files),
+        )
+        .order_by(Contract.id)
+    )
     if affected:
         contracts = db.scalars(query.where(Contract.id.in_(affected))).all()
     else:

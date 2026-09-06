@@ -41,3 +41,23 @@ class Contract(Base):
     schedules: Mapped[list["PaymentSchedule"]] = relationship(back_populates="contract")  # noqa: F821
     collections: Mapped[list["Collection"]] = relationship(back_populates="contract")  # noqa: F821
     import_batch: Mapped["ImportBatch | None"] = relationship(back_populates="contracts")  # noqa: F821
+
+    @property
+    def source_filename(self) -> str | None:
+        """列表第一列用原始文件名；手工录入没有附件时为空。"""
+        files = sorted(self.files, key=lambda item: item.id)
+        return files[0].original_name if files else None
+
+    @property
+    def parse_status(self) -> str:
+        """由附件识别状态汇总：有一份还在跑，整份合同就算识别中。"""
+        if not self.files:
+            return "done"
+        statuses = [item.parse_status for item in self.files]
+        if any(item == "processing" for item in statuses):
+            return "processing"
+        if any(item == "pending" for item in statuses):
+            return "pending"
+        if all(item == "failed" for item in statuses):
+            return "failed"
+        return "done"

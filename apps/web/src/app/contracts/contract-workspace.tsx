@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { FileActions, FilePreview } from "@/components/file-preview";
+import { StatusBadge } from "@/components/status-badge";
 import { EmptyHint, Field, FormError, PageHeader } from "@/components/ui";
 import { api, money } from "@/lib/api";
 import {
@@ -55,6 +56,16 @@ export function ContractWorkspace({
     reload().catch((err) => setError(err instanceof Error ? err.message : "加载失败"));
   }, [contractId]);
 
+  const parsing = contract ? contract.parse_status === "pending" || contract.parse_status === "processing" : false;
+
+  useEffect(() => {
+    if (!parsing) return;
+    const timer = window.setInterval(() => {
+      reload().catch(() => undefined);
+    }, 1500);
+    return () => window.clearInterval(timer);
+  }, [parsing, contractId]);
+
   async function saveFields(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!contract) return;
@@ -99,7 +110,7 @@ export function ContractWorkspace({
       <PageHeader
         eyebrow="Contracts"
         title={contract.title}
-        description={`编号 ${contract.contract_no || "未编号（内部 ID " + contract.id + "）"} · 合同额 ${money(contract.amount)} · 已开票 ${money(contract.billed_amount)} · 已回款 ${money(contract.collected_amount)}`}
+        description={`${contract.source_filename ? `文件 ${contract.source_filename} · ` : ""}编号 ${contract.contract_no || "未编号（内部 ID " + contract.id + "）"} · 合同额 ${money(contract.amount)} · 已开票 ${money(contract.billed_amount)} · 已回款 ${money(contract.collected_amount)}`}
         action={
           <Link href={`/invoices/new?contract=${contractId}`} className="ui-btn ui-btn-primary">
             新建发票
@@ -110,6 +121,18 @@ export function ContractWorkspace({
         <div className="mb-6">
           <FormError message={error} />
         </div>
+      ) : null}
+      {contract.parse_status === "pending" || contract.parse_status === "processing" ? (
+        <p className="mb-6 flex flex-wrap items-center gap-3 text-body text-mid-gray">
+          <StatusBadge kind="parse" value={contract.parse_status} />
+          正在后台识别这份合同，页面会自动更新。刷新不会中断。
+        </p>
+      ) : null}
+      {contract.parse_status === "failed" ? (
+        <p className="mb-6 flex flex-wrap items-center gap-3 text-body text-mid-gray">
+          <StatusBadge kind="parse" value={contract.parse_status} />
+          识别没完成，请对照附件手工核对要素。
+        </p>
       ) : null}
 
       <div className="mb-6 flex flex-wrap gap-3">

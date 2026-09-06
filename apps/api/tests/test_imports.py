@@ -1,11 +1,15 @@
+import os
+import threading
 from datetime import date
 from decimal import Decimal
 from io import BytesIO
+from pathlib import Path
 from zipfile import ZipFile
 
 from fastapi.testclient import TestClient
 
 from app.services.extract import ExtractedFields
+from app.services.jobs import wait_import
 from app.services.pdf_parse import ParsedPdf
 
 
@@ -22,6 +26,15 @@ def _parse_map(mapping: dict[str, ExtractedFields]):
         return ParsedPdf(text=text, source="electronic", fields=mapping[text])
 
     return fake_parse
+
+
+def _wait_import(client: TestClient, response) -> dict:
+    assert response.status_code == 201, response.text
+    batch_id = response.json()["id"]
+    wait_import(batch_id)
+    detail = client.get(f"/api/v1/contracts/imports/{batch_id}")
+    assert detail.status_code == 200, detail.text
+    return detail.json()
 
 
 def test_import_groups_by_number_and_keeps_unnumbered_separate(logged_in: TestClient, monkeypatch) -> None:
@@ -50,8 +63,10 @@ def test_import_groups_by_number_and_keeps_unnumbered_separate(logged_in: TestCl
         "/api/v1/contracts/imports",
         files=[("files", (name, content.encode("utf-8"), "application/pdf")) for name, content in texts.items()],
     )
+    # 上传当下就有三份占位合同，识别完成后再按编号合成两份
     assert response.status_code == 201, response.text
-    body = response.json()
+    assert len(response.json()["contracts"]) == 3
+    body = _wait_import(logged_in, response)
     assert len(body["contracts"]) == 2
     numbered = next(item for item in body["contracts"] if item["contract_no"] == "HT-GROUP-1")
     blank = next(item for item in body["contracts"] if item["contract_no"] is None)
@@ -70,7 +85,7 @@ def test_two_blank_contract_numbers_allowed(logged_in: TestClient) -> None:
     assert second.json()["id"] != first.json()["id"]
 
 
-def test_zip_upload(logged_in: TestClient, monkeypatch) -> None:
+def test_zip_upload_extracts_to_separate_pdf(logged_in: TestClient, monkeypatch) -> None:
     monkeypatch.setattr(
         "app.services.imports.parse_pdf_bytes",
         _parse_with(ExtractedFields(doc_type="contract", contract_no="HT-ZIP-1", party_a="AAA", party_b="BBB")),
@@ -82,8 +97,14 @@ def test_zip_upload(logged_in: TestClient, monkeypatch) -> None:
         "/api/v1/contracts/imports",
         files=[("files", ("pack.zip", buffer.getvalue(), "application/zip"))],
     )
-    assert response.status_code == 201, response.text
-    assert response.json()["contracts"][0]["contract_no"] == "HT-ZIP-1"
+    body = _wait_import(logged_in, response)
+    assert body["contracts"][0]["contract_no"] == "HT-ZIP-1"
+    assert body["contracts"][0]["source_filename"] == "pack/inner.pdf"
+    upload_root = Path(os.environ["UPLOAD_DIR"]) / str(body["id"])
+    pdfs = list(upload_root.glob("*.pdf"))
+    zips = list(upload_root.glob("*.zip"))
+    assert len(pdfs) == 1
+    assert zips == []
 
 
 def test_collection_and_schedule(logged_in: TestClient) -> None:
@@ -135,6 +156,7 @@ def test_duplicate_bytes_do_not_create_second_contract(logged_in: TestClient, mo
     )
     files = [("files", ("same.pdf", payload.encode("utf-8"), "application/pdf"))]
     first = logged_in.post("/api/v1/contracts/imports", files=files)
+    _wait_import(logged_in, first)
     second = logged_in.post("/api/v1/contracts/imports", files=files)
     assert first.status_code == 201, first.text
     assert second.status_code == 201, second.text
@@ -170,10 +192,10 @@ def test_same_batch_duplicate_bytes_kept_once(logged_in: TestClient, monkeypatch
             ("files", ("copy.pdf", blob, "application/pdf")),
         ],
     )
-    assert response.status_code == 201, response.text
-    assert len(response.json()["contracts"]) == 1
-    assert len(response.json()["files"]) == 1
-    assert "内容相同" in (response.json()["warning_text"] or "")
+    body = _wait_import(logged_in, response)
+    assert len(body["contracts"]) == 1
+    assert len(body["files"]) == 1
+    assert "内容相同" in (body["warning_text"] or "")
 
 
 def test_unnumbered_fingerprint_merges_different_scans(logged_in: TestClient, monkeypatch) -> None:
@@ -189,15 +211,15 @@ def test_unnumbered_fingerprint_merges_different_scans(logged_in: TestClient, mo
         "/api/v1/contracts/imports",
         files=[("files", ("scan-a.pdf", b"scan-a-original", "application/pdf"))],
     )
+    first_body = _wait_import(logged_in, first)
     second = logged_in.post(
         "/api/v1/contracts/imports",
         files=[("files", ("scan-b.pdf", b"scan-b-copy", "application/pdf"))],
     )
-    assert first.status_code == 201, first.text
-    assert second.status_code == 201, second.text
-    assert second.json()["contracts"][0]["id"] == first.json()["contracts"][0]["id"]
-    assert "已并入" in (second.json()["warning_text"] or "")
-    files = logged_in.get(f"/api/v1/contracts/{first.json()['contracts'][0]['id']}/files")
+    second_body = _wait_import(logged_in, second)
+    assert second_body["contracts"][0]["id"] == first_body["contracts"][0]["id"]
+    assert "已并入" in (second_body["warning_text"] or "")
+    files = logged_in.get(f"/api/v1/contracts/{first_body['contracts'][0]['id']}/files")
     assert len(files.json()) == 2
 
 
@@ -218,3 +240,47 @@ def test_preview_is_inline_and_download_is_attachment(logged_in: TestClient, mon
     assert preview.headers["content-type"].startswith("application/pdf")
     assert "inline" in preview.headers["content-disposition"]
     assert "attachment" in download.headers["content-disposition"]
+
+
+def test_upload_returns_placeholders_then_list_shows_filename(logged_in: TestClient, monkeypatch) -> None:
+    started = threading.Event()
+    release = threading.Event()
+
+    def slow_parse(data: bytes) -> ParsedPdf:
+        started.set()
+        assert release.wait(timeout=5)
+        return ParsedPdf(
+            text=data.decode("utf-8"),
+            source="electronic",
+            fields=ExtractedFields(doc_type="contract", contract_no="HT-ASYNC-1", party_a="甲", party_b="乙"),
+        )
+
+    monkeypatch.setattr("app.services.imports.parse_pdf_bytes", slow_parse)
+    try:
+        response = logged_in.post(
+            "/api/v1/contracts/imports",
+            files=[("files", ("采购合同.pdf", b"async-contract-bytes", "application/pdf"))],
+        )
+        assert response.status_code == 201, response.text
+        body = response.json()
+        assert body["status"] == "processing"
+        assert body["contracts"][0]["source_filename"] == "采购合同.pdf"
+        assert body["contracts"][0]["parse_status"] in {"pending", "processing"}
+        assert body["files"][0]["parse_status"] in {"pending", "processing"}
+        listing = logged_in.get("/api/v1/contracts")
+        assert listing.status_code == 200
+        row = listing.json()[0]
+        assert row["source_filename"] == "采购合同.pdf"
+        assert row["parse_status"] in {"pending", "processing"}
+        assert started.wait(timeout=5)
+    finally:
+        release.set()
+    done = _wait_import(logged_in, response)
+    assert done["status"] == "review"
+    assert done["contracts"][0]["contract_no"] == "HT-ASYNC-1"
+    listing = logged_in.get("/api/v1/contracts")
+    row = listing.json()[0]
+    assert row["parse_status"] == "done"
+    assert row["source_filename"] == "采购合同.pdf"
+    by_name = logged_in.get("/api/v1/contracts", params={"party": "采购合同"})
+    assert any(item["id"] == row["id"] for item in by_name.json())

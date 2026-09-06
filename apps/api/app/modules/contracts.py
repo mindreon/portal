@@ -96,7 +96,11 @@ def list_contracts(
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
 ) -> list[ContractOut]:
-    query = select(Contract).options(selectinload(Contract.invoices), selectinload(Contract.collections))
+    query = select(Contract).options(
+        selectinload(Contract.invoices),
+        selectinload(Contract.collections),
+        selectinload(Contract.files),
+    )
     if party and party.strip():
         needle = f"%{party.strip().lower()}%"
         query = query.where(
@@ -106,6 +110,12 @@ def list_contracts(
                 func.lower(Contract.counterparty).like(needle),
                 func.lower(Contract.subject_name).like(needle),
                 func.lower(Contract.title).like(needle),
+                Contract.id.in_(
+                    select(ContractFile.contract_id).where(
+                        ContractFile.contract_id.is_not(None),
+                        func.lower(ContractFile.original_name).like(needle),
+                    )
+                ),
             )
         )
     effective = func.coalesce(Contract.signed_at, Contract.start_date)
@@ -123,7 +133,11 @@ def contract_summary(
     _: User = Depends(get_current_user),
 ) -> ContractSummary:
     rows = db.scalars(
-        select(Contract).options(selectinload(Contract.invoices), selectinload(Contract.collections))
+        select(Contract).options(
+            selectinload(Contract.invoices),
+            selectinload(Contract.collections),
+            selectinload(Contract.files),
+        )
     ).all()
     total = sum((item.amount or Decimal("0") for item in rows), Decimal("0"))
     collected = sum(
