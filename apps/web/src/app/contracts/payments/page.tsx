@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
+import { PinnedTable } from "@/components/pinned-table";
 import { EmptyHint, PageHeader } from "@/components/ui";
 import { api, money } from "@/lib/api";
 import type { CollectionRow } from "@/lib/types";
@@ -36,45 +37,43 @@ export default function ContractPaymentsPage() {
         </div>
       </section>
 
-      <div className="ui-card overflow-x-auto">
-        <table className="ui-table">
-          <thead>
+      <PinnedTable pinLeft={1} pinRight={1}>
+        <thead>
+          <tr>
+            <th>到账日</th>
+            <th>合同</th>
+            <th>甲 / 乙</th>
+            <th>期次</th>
+            <th>金额</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.length === 0 ? (
             <tr>
-              <th>到账日</th>
-              <th>合同</th>
-              <th>甲 / 乙</th>
-              <th>期次</th>
-              <th>金额</th>
+              <td colSpan={5}>
+                <EmptyHint>还没有回款。打开某份合同，在「回款」页签登记到账。</EmptyHint>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr>
-                <td colSpan={5}>
-                  <EmptyHint>还没有回款。打开某份合同，在「回款」页签登记到账。</EmptyHint>
+          ) : (
+            rows.map((row) => (
+              <tr key={row.id}>
+                <td>{row.received_at || "—"}</td>
+                <td>
+                  <Link href={`/contracts/${row.contract_id}?tab=payments`} className="font-medium hover:underline">
+                    {row.contract_title}
+                  </Link>
+                  <p className="mt-1 text-[12px] text-mid-gray">{row.contract_no || `未编号 · ID ${row.contract_id}`}</p>
                 </td>
+                <td>
+                  {row.party_a || "—"} / {row.party_b || "—"}
+                </td>
+                <td>{row.schedule_name || "—"}</td>
+                <td>{money(row.amount)}</td>
               </tr>
-            ) : (
-              rows.map((row) => (
-                <tr key={row.id}>
-                  <td>{row.received_at || "—"}</td>
-                  <td>
-                    <Link href={`/contracts/${row.contract_id}?tab=payments`} className="font-medium hover:underline">
-                      {row.contract_title}
-                    </Link>
-                    <p className="mt-1 text-[12px] text-mid-gray">{row.contract_no || `未编号 · ID ${row.contract_id}`}</p>
-                  </td>
-                  <td>
-                    {row.party_a || "—"} / {row.party_b || "—"}
-                  </td>
-                  <td>{row.schedule_name || "—"}</td>
-                  <td>{money(row.amount)}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+            ))
+          )}
+        </tbody>
+      </PinnedTable>
     </AppShell>
   );
 }
