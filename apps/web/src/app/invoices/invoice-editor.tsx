@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { Field, FormError, PageHeader } from "@/components/ui";
 import { api } from "@/lib/api";
+import { useCurrentUser } from "@/lib/current-user";
 import { INVOICE_STATUS_LABEL, type Contract, type Invoice } from "@/lib/types";
 
 const EMPTY = {
@@ -31,13 +32,20 @@ export function InvoiceEditor({
   defaultContractId?: string;
 }) {
   const router = useRouter();
+  const { ready, canAccess } = useCurrentUser();
+  const canLinkContract = canAccess("contracts");
   const [form, setForm] = useState({ ...EMPTY, contract_id: defaultContractId ?? "" });
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    api<Contract[]>("/api/v1/contracts").then(setContracts);
+    if (!ready) return;
+    if (canLinkContract) {
+      api<Contract[]>("/api/v1/contracts").then(setContracts).catch(() => undefined);
+    } else {
+      setContracts([]);
+    }
     if (!invoiceId) return;
     api<Invoice>(`/api/v1/invoices/${invoiceId}`).then((item) => {
       setForm({
@@ -55,7 +63,7 @@ export function InvoiceEditor({
         contract_id: item.contract_id ? String(item.contract_id) : "",
       });
     });
-  }, [invoiceId]);
+  }, [invoiceId, ready, canLinkContract]);
 
   function update(name: keyof typeof EMPTY, value: string) {
     setForm((current) => ({ ...current, [name]: value }));
@@ -71,7 +79,7 @@ export function InvoiceEditor({
       issued_at: form.issued_at || null,
       due_at: form.due_at || null,
       notes: form.notes || null,
-      contract_id: form.contract_id ? Number(form.contract_id) : null,
+      contract_id: canLinkContract || invoiceId ? (form.contract_id ? Number(form.contract_id) : null) : null,
     };
     try {
       if (invoiceId) {
@@ -140,16 +148,18 @@ export function InvoiceEditor({
             <input type="date" value={form.due_at} onChange={(e) => update("due_at", e.target.value)} className="ui-input" />
           </Field>
         </div>
-        <Field label="关联合同（可选）">
-          <select value={form.contract_id} onChange={(e) => update("contract_id", e.target.value)} className="ui-input">
-            <option value="">不关联</option>
-            {contracts.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.contract_no} · {item.title}
-              </option>
-            ))}
-          </select>
-        </Field>
+        {canLinkContract ? (
+          <Field label="关联合同（可选）">
+            <select value={form.contract_id} onChange={(e) => update("contract_id", e.target.value)} className="ui-input">
+              <option value="">不关联</option>
+              {contracts.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.contract_no} · {item.title}
+                </option>
+              ))}
+            </select>
+          </Field>
+        ) : null}
         <Field label="备注">
           <textarea value={form.notes} onChange={(e) => update("notes", e.target.value)} rows={4} className="ui-input" />
         </Field>

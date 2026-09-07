@@ -7,6 +7,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.access import require_module
 from app.core.deps import get_current_user
 from app.db.session import get_db
 from app.models.contract import Contract
@@ -28,7 +29,11 @@ from app.schemas.contract import (
 )
 from app.services.extract import derive_counterparty, derive_our_role, normalize_contract_no
 
-router = APIRouter(prefix="/contracts", tags=["contracts"])
+router = APIRouter(
+    prefix="/contracts",
+    tags=["contracts"],
+    dependencies=[Depends(require_module("contracts"))],
+)
 
 
 def _to_out(contract: Contract) -> ContractOut:

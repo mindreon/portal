@@ -20,7 +20,7 @@ from app.core.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.auth import AuthConfigOut, CurrentUserOut, DevLoginIn, FeishuLoginOut
-from app.services.auth import get_or_create_dev_user, upsert_feishu_user
+from app.services.auth import get_or_create_dev_user, to_current_user, upsert_feishu_user
 from app.services.feishu import FeishuError, build_authorize_url, exchange_code, fetch_user_info
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -82,18 +82,18 @@ def dev_login(
     payload: DevLoginIn,
     response: Response,
     db: Session = Depends(get_db),
-) -> User:
+) -> CurrentUserOut:
     settings = get_settings()
     if not settings.auth_allow_dev_login:
         raise HTTPException(status_code=403, detail="当前环境已关闭开发登录")
     user = get_or_create_dev_user(db, payload.name)
     set_session_cookie(response, user.id)
-    return user
+    return to_current_user(user)
 
 
 @router.get("/me", response_model=CurrentUserOut)
-def me(user: User = Depends(get_current_user)) -> User:
-    return user
+def me(user: User = Depends(get_current_user)) -> CurrentUserOut:
+    return to_current_user(user)
 
 
 @router.post("/logout")

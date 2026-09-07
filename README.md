@@ -75,6 +75,9 @@ Caddy、Postgres、Node、uv 都走公司 Harbor 镜像。当前没有旧库数�
    本机 Docker 默认是：`http://localhost/api/v1/auth/feishu/callback`
 4. 在「权限管理」申请登录需要的权限（默认 `auth:user.id:read`），然后发布应用，并给同事开通可用性。
 5. 公司正式环境把 `AUTH_ALLOW_DEV_LOGIN` 改成 `false`，`COOKIE_SECURE` 在 HTTPS 下改成 `true`。
+6. 在 `.env` 里填写 `AUTH_ADMIN_EMAILS`（或 `AUTH_ADMIN_OPEN_IDS`），把能看合同的人加进去。没写进名单的飞书用户是普通成员：能登录、能用发票，侧栏不会出现合同；直接打开合同链接或调接口会返回 **403**。
+
+飞书开放平台只能控制「谁能打开这个应用」，**不能**按模块发菜单。合同、发票各给谁看，是我们系统里的角色权限，不是飞书后台的开关。
 
 飞书授权流程可以记成三步：
 
@@ -87,6 +90,21 @@ Caddy、Postgres、Node、uv 都走公司 Harbor 镜像。当前没有旧库数�
 - [获取授权码](https://open.feishu.cn/document/authentication-management/access-token/obtain-oauth-code)
 - [获取 user_access_token](https://open.feishu.cn/document/uAjLw4CM/ukTMukTMukTM/authentication-management/access-token/get-user-access-token)
 - [获取用户信息](https://open.feishu.cn/document/uAjLw4CM/ukTMukTMukTM/reference/authen-v1/user_info/get)
+
+## 谁能看见哪些菜单
+
+飞书后台的「应用可用性」只能决定谁能登录这套系统，**不能**单独关掉合同、单独打开发票。
+
+所以权限在 Portal 自己的用户表里：
+
+| 角色 | 怎么变成这个角色 | 能看见 |
+| --- | --- | --- |
+| 管理员 `admin` | 飞书邮箱写进 `AUTH_ADMIN_EMAILS`，或 open_id 写进 `AUTH_ADMIN_OPEN_IDS`；本地开发登录默认就是管理员 | 合同 + 发票 |
+| 普通成员 `member` | 飞书登录且不在上面名单里 | 发票等对全员开放的模块，看不到合同 |
+
+名单改完后，对方重新用飞书登录一次就会生效。侧栏和工作台会藏掉没权限的模块；有人把合同网址存了收藏夹，打开会看到 403，接口同样拒绝。
+
+以后如果要按部门、按人勾选很多模块，再做独立的权限管理页。现在两个角色够用，不必先上飞书通讯录同步。
 
 ## 本地开发（不用 Docker）
 
@@ -143,7 +161,7 @@ uv run pytest -q
 | GET | `/api/v1/auth/feishu/login` | 返回飞书授权地址 |
 | GET | `/api/v1/auth/feishu/callback` | 飞书回调，写登录 Cookie |
 | POST | `/api/v1/auth/dev-login` | 本地开发登录 |
-| GET | `/api/v1/auth/me` | 当前用户 |
+| GET | `/api/v1/auth/me` | 当前用户，含 `role` 和可访问的 `modules` |
 | POST | `/api/v1/auth/logout` | 退出 |
 | * | `/api/v1/contracts` | 合同增删改查 |
 | * | `/api/v1/invoices` | 发票增删改查 |

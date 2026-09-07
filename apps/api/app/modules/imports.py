@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.access import require_module
 from app.core.deps import get_current_user
 from app.db.session import get_db
 from app.models.document import ContractFile, ImportBatch
@@ -14,7 +15,11 @@ from app.services.file_serve import original_file_response
 from app.services.imports import import_needs_processing, run_import
 from app.services.jobs import enqueue_import
 
-router = APIRouter(prefix="/contracts/imports", tags=["contract-imports"])
+router = APIRouter(
+    prefix="/contracts/imports",
+    tags=["contract-imports"],
+    dependencies=[Depends(require_module("contracts"))],
+)
 
 
 class ImportOut(BaseModel):

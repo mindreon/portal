@@ -3,6 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.access import require_module
 from app.core.deps import get_current_user
 from app.db.session import get_db
 from app.models.contract import Contract
@@ -10,7 +11,11 @@ from app.models.invoice import Invoice
 from app.models.user import User
 from app.schemas.invoice import INVOICE_STATUSES, InvoiceIn, InvoiceOut
 
-router = APIRouter(prefix="/invoices", tags=["invoices"])
+router = APIRouter(
+    prefix="/invoices",
+    tags=["invoices"],
+    dependencies=[Depends(require_module("invoices"))],
+)
 
 
 @router.get("", response_model=list[InvoiceOut])
