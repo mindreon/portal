@@ -344,51 +344,96 @@ function localToday(): string {
   return `${now.getFullYear()}-${month}-${day}`;
 }
 
-function RowActions({
-  onEdit,
-  onDelete,
+function nextPeriodName(count: number): string {
+  return count === 0 ? "一次性" : `第${count + 1}期`;
+}
+
+/** 这一期还差多少没回。已经齐了就填 0，避免误登记一笔重复的。 */
+function leftover(item: PaymentSchedule): string {
+  const left = Number(item.amount) - Number(item.collected_amount);
+  if (!Number.isFinite(left) || left <= 0) return "0";
+  return String(left);
+}
+
+function latestReceivedAt(rows: Collection[]): string | null {
+  const dates = rows.map((row) => row.received_at).filter((value): value is string => Boolean(value));
+  if (dates.length === 0) return null;
+  return dates.sort().at(-1) ?? null;
+}
+
+function ActionLink({
+  children,
+  onClick,
+  danger = false,
 }: {
-  onEdit: () => void;
-  onDelete: () => void;
+  children: React.ReactNode;
+  onClick: () => void;
+  danger?: boolean;
 }) {
   return (
-    <span className="flex shrink-0 items-center gap-3">
-      <button type="button" onClick={onEdit} className="text-body font-medium text-ink underline-offset-4 hover:underline">
-        编辑
+    <button
+      type="button"
+      onClick={onClick}
+      className={`text-body font-medium underline-offset-4 hover:underline ${danger ? "text-ember" : "text-ink"}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function RowSaveCancel({
+  onSave,
+  onCancel,
+  saveLabel,
+  busy = false,
+}: {
+  onSave: () => void;
+  onCancel: () => void;
+  saveLabel: string;
+  busy?: boolean;
+}) {
+  return (
+    <span className="relative z-10 flex flex-wrap items-center gap-3">
+      <button type="button" onClick={onSave} disabled={busy} className="ui-btn ui-btn-primary">
+        {busy ? "提交中…" : saveLabel}
       </button>
-      <button
-        type="button"
-        onClick={onDelete}
-        className="text-body font-medium text-ember underline-offset-4 hover:underline"
-      >
-        删除
+      <button type="button" onClick={onCancel} disabled={busy} className="ui-btn ui-btn-secondary">
+        取消
       </button>
     </span>
   );
 }
 
-function ScheduleRow({
+function ScheduleTableRow({
   item,
+  receipts,
   contractId,
   onChanged,
   onError,
 }: {
   item: PaymentSchedule;
+  receipts: Collection[];
   contractId: number;
   onChanged: () => Promise<void>;
   onError: (message: string) => void;
 }) {
-  const [editing, setEditing] = useState(false);
+  const [mode, setMode] = useState<"view" | "edit" | "collect">("view");
   const [name, setName] = useState(item.name);
   const [amount, setAmount] = useState(item.amount);
+  const [received, setReceived] = useState(leftover(item));
+  const [receivedAt, setReceivedAt] = useState(localToday);
+  const [busy, setBusy] = useState(false);
+  const singleReceipt = receipts.length === 1 ? receipts[0] : null;
 
   useEffect(() => {
     setName(item.name);
     setAmount(item.amount);
-  }, [item.name, item.amount]);
+    if (mode === "view") setReceived(leftover(item));
+  }, [item.name, item.amount, item.collected_amount, mode]);
 
-  async function save(event: React.FormEvent) {
-    event.preventDefault();
+  async function savePlan() {
+    if (busy) return;
+    setBusy(true);
     try {
       await api(`/api/v1/contracts/${contractId}/schedules/${item.id}`, {
         method: "PUT",
@@ -399,16 +444,58 @@ function ScheduleRow({
           notes: item.notes,
         }),
       });
-      setEditing(false);
+      // 只有一笔到账时，编辑也可以改这笔钱和日期，免得登记错了还得整期删掉。
+      if (singleReceipt) {
+        await api(`/api/v1/contracts/${contractId}/collections/${singleReceipt.id}`, {
+          method: "PUT",
+          body: JSON.stringify({
+            amount: received,
+            received_at: receivedAt || null,
+            schedule_id: item.id,
+            notes: singleReceipt.notes,
+          }),
+        });
+      }
+      setMode("view");
       await onChanged();
     } catch (err) {
       onError(err instanceof Error ? err.message : "保存失败");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function confirmReceipt() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await api(`/api/v1/contracts/${contractId}/collections`, {
+        method: "POST",
+        body: JSON.stringify({
+          amount: received,
+          received_at: receivedAt || null,
+          schedule_id: item.id,
+        }),
+      });
+      setMode("view");
+      await onChanged();
+    } catch (err) {
+      onError(err instanceof Error ? err.message : "登记失败");
+    } finally {
+      setBusy(false);
     }
   }
 
   async function remove() {
-    if (!window.confirm("确定删除这一期回款计划？若已经挂了发票或到账，需要先处理那些记录。")) return;
+    const hasReceipts = receipts.length > 0;
+    const message = hasReceipts
+      ? "该期已有到账。删除会一并去掉到账记录，合同已回款会重新汇总。确定删除？"
+      : "确定删除这一期回款计划？";
+    if (!window.confirm(message)) return;
     try {
+      for (const receipt of receipts) {
+        await api(`/api/v1/contracts/${contractId}/collections/${receipt.id}`, { method: "DELETE" });
+      }
       await api(`/api/v1/contracts/${contractId}/schedules/${item.id}`, { method: "DELETE" });
       await onChanged();
     } catch (err) {
@@ -416,73 +503,142 @@ function ScheduleRow({
     }
   }
 
+  function startCollect() {
+    setReceived(leftover(item));
+    setReceivedAt(localToday());
+    setMode("collect");
+  }
+
+  function startEdit() {
+    setName(item.name);
+    setAmount(item.amount);
+    if (singleReceipt) {
+      setReceived(singleReceipt.amount);
+      setReceivedAt(singleReceipt.received_at ?? "");
+    }
+    setMode("edit");
+  }
+
+  const receivedDate = latestReceivedAt(receipts);
+  const onEnter =
+    mode === "edit" ? savePlan : mode === "collect" ? confirmReceipt : undefined;
+
+  function handleEnter(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Enter" && onEnter) {
+      event.preventDefault();
+      onEnter();
+    }
+  }
+
   return (
-    <li className="rounded-[10px] bg-canvas px-4 py-3 text-body">
-      {editing ? (
-        <form onSubmit={save} className="flex flex-wrap items-center gap-3">
-          <input value={name} onChange={(e) => setName(e.target.value)} className="ui-input w-32" required />
+    <tr>
+      <td>
+        {mode === "edit" ? (
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={handleEnter}
+            className="ui-input w-36"
+            required
+          />
+        ) : (
+          <span className="font-medium">
+            {item.period_no}. {item.name}
+          </span>
+        )}
+      </td>
+      <td>
+        {mode === "edit" ? (
           <input
             type="number"
             step="0.01"
             min="0"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
+            onKeyDown={handleEnter}
             className="ui-input w-32"
             required
           />
-          <button type="submit" className="ui-btn ui-btn-primary">
-            保存
-          </button>
-          <button type="button" onClick={() => setEditing(false)} className="ui-btn ui-btn-secondary">
-            取消
-          </button>
-        </form>
-      ) : (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <span>
-            {item.period_no}. {item.name} · 计划 {money(item.amount)} · 已回 {money(item.collected_amount)}
+        ) : (
+          money(item.amount)
+        )}
+      </td>
+      <td>
+        {mode === "collect" || (mode === "edit" && singleReceipt) ? (
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={received}
+            onChange={(e) => setReceived(e.target.value)}
+            onKeyDown={handleEnter}
+            className="ui-input w-32"
+            required
+          />
+        ) : (
+          money(item.collected_amount)
+        )}
+      </td>
+      <td>
+        {mode === "collect" || (mode === "edit" && singleReceipt) ? (
+          <input
+            type="date"
+            value={receivedAt}
+            onChange={(e) => setReceivedAt(e.target.value)}
+            onKeyDown={handleEnter}
+            className="ui-input w-40"
+          />
+        ) : (
+          receivedDate || "—"
+        )}
+      </td>
+      <td>
+        {mode === "edit" ? (
+          <RowSaveCancel onSave={savePlan} onCancel={() => setMode("view")} saveLabel="保存" busy={busy} />
+        ) : mode === "collect" ? (
+          <RowSaveCancel onSave={confirmReceipt} onCancel={() => setMode("view")} saveLabel="确认" busy={busy} />
+        ) : (
+          <span className="relative z-10 flex flex-wrap items-center gap-3 whitespace-nowrap">
+            <ActionLink onClick={startEdit}>编辑</ActionLink>
+            <ActionLink danger onClick={remove}>
+              删除
+            </ActionLink>
+            <ActionLink onClick={startCollect}>登记确收</ActionLink>
           </span>
-          <RowActions onEdit={() => setEditing(true)} onDelete={remove} />
-        </div>
-      )}
-    </li>
+        )}
+      </td>
+    </tr>
   );
 }
 
-function CollectionRow({
+function LooseCollectionRow({
   item,
   contractId,
-  schedules,
   onChanged,
   onError,
 }: {
   item: Collection;
   contractId: number;
-  schedules: PaymentSchedule[];
   onChanged: () => Promise<void>;
   onError: (message: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [amount, setAmount] = useState(item.amount);
   const [receivedAt, setReceivedAt] = useState(item.received_at ?? "");
-  const [scheduleId, setScheduleId] = useState(item.schedule_id ? String(item.schedule_id) : "");
-  const scheduleName = schedules.find((row) => row.id === item.schedule_id)?.name;
 
   useEffect(() => {
     setAmount(item.amount);
     setReceivedAt(item.received_at ?? "");
-    setScheduleId(item.schedule_id ? String(item.schedule_id) : "");
-  }, [item.amount, item.received_at, item.schedule_id]);
+  }, [item.amount, item.received_at]);
 
-  async function save(event: React.FormEvent) {
-    event.preventDefault();
+  async function save() {
     try {
       await api(`/api/v1/contracts/${contractId}/collections/${item.id}`, {
         method: "PUT",
         body: JSON.stringify({
           amount,
           received_at: receivedAt || null,
-          schedule_id: scheduleId ? Number(scheduleId) : null,
+          schedule_id: null,
           notes: item.notes,
         }),
       });
@@ -504,9 +660,13 @@ function CollectionRow({
   }
 
   return (
-    <li className="rounded-[10px] bg-canvas px-4 py-3 text-body">
-      {editing ? (
-        <form onSubmit={save} className="flex flex-wrap items-center gap-3">
+    <tr>
+      <td>
+        <span className="font-medium">未指定期次</span>
+      </td>
+      <td>—</td>
+      <td>
+        {editing ? (
           <input
             type="number"
             step="0.01"
@@ -516,32 +676,30 @@ function CollectionRow({
             className="ui-input w-32"
             required
           />
+        ) : (
+          money(item.amount)
+        )}
+      </td>
+      <td>
+        {editing ? (
           <input type="date" value={receivedAt} onChange={(e) => setReceivedAt(e.target.value)} className="ui-input w-40" />
-          <select value={scheduleId} onChange={(e) => setScheduleId(e.target.value)} className="ui-input w-40">
-            <option value="">不指定期次</option>
-            {schedules.map((row) => (
-              <option key={row.id} value={row.id}>
-                {row.name}
-              </option>
-            ))}
-          </select>
-          <button type="submit" className="ui-btn ui-btn-primary">
-            保存
-          </button>
-          <button type="button" onClick={() => setEditing(false)} className="ui-btn ui-btn-secondary">
-            取消
-          </button>
-        </form>
-      ) : (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <span>
-            {money(item.amount)} · {item.received_at || "未填日期"}
-            {scheduleName ? ` · ${scheduleName}` : ""}
+        ) : (
+          item.received_at || "—"
+        )}
+      </td>
+      <td>
+        {editing ? (
+          <RowSaveCancel onSave={save} onCancel={() => setEditing(false)} saveLabel="保存" />
+        ) : (
+          <span className="flex flex-wrap items-center gap-3 whitespace-nowrap">
+            <ActionLink onClick={() => setEditing(true)}>编辑</ActionLink>
+            <ActionLink danger onClick={remove}>
+              删除
+            </ActionLink>
           </span>
-          <RowActions onEdit={() => setEditing(true)} onDelete={remove} />
-        </div>
-      )}
-    </li>
+        )}
+      </td>
+    </tr>
   );
 }
 
@@ -556,12 +714,11 @@ function PaymentsPanel({
   collections: Collection[];
   onChanged: () => Promise<void>;
 }) {
-  const [name, setName] = useState("第二期");
+  const [name, setName] = useState(() => nextPeriodName(schedules.length));
   const [amount, setAmount] = useState("0");
-  const [received, setReceived] = useState("0");
-  const [receivedAt, setReceivedAt] = useState(localToday);
-  const [scheduleId, setScheduleId] = useState("");
   const [error, setError] = useState("");
+  const looseCollections = collections.filter((item) => item.schedule_id == null);
+  const empty = schedules.length === 0 && looseCollections.length === 0;
 
   async function addSchedule(event: React.FormEvent) {
     event.preventDefault();
@@ -571,6 +728,7 @@ function PaymentsPanel({
         method: "POST",
         body: JSON.stringify({ name, amount }),
       });
+      setName(nextPeriodName(schedules.length + 1));
       setAmount("0");
       await onChanged();
     } catch (err) {
@@ -578,97 +736,74 @@ function PaymentsPanel({
     }
   }
 
-  async function addCollection(event: React.FormEvent) {
-    event.preventDefault();
-    setError("");
-    try {
-      await api(`/api/v1/contracts/${contractId}/collections`, {
-        method: "POST",
-        body: JSON.stringify({
-          amount: received,
-          received_at: receivedAt || null,
-          schedule_id: scheduleId ? Number(scheduleId) : null,
-        }),
-      });
-      setReceived("0");
-      await onChanged();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "登记失败");
-    }
-  }
-
   return (
     <div className="space-y-6">
       {error ? <FormError message={error} /> : null}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="ui-card p-6">
-          <h3 className="heading-sm">回款计划</h3>
-          <p className="mt-3 text-body text-mid-gray">一次性会自动生成一期；分期在这里加期数。输错了可以直接改或删。</p>
-          <ul className="mt-5 space-y-2.5">
-            {schedules.map((item) => (
-              <ScheduleRow
-                key={item.id}
-                item={item}
-                contractId={contractId}
-                onChanged={onChanged}
-                onError={setError}
-              />
-            ))}
-          </ul>
-          <form onSubmit={addSchedule} className="mt-5 flex flex-wrap gap-3">
-            <input value={name} onChange={(e) => setName(e.target.value)} className="ui-input w-32" />
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="ui-input w-32"
-            />
-            <button type="submit" className="ui-btn ui-btn-secondary">
-              加一期
-            </button>
-          </form>
-        </div>
-        <div className="ui-card p-6">
-          <h3 className="heading-sm">实际回款</h3>
-          <p className="mt-3 text-body text-mid-gray">金额、日期、期次都可以事后修改；删掉后已回款会重新汇总。</p>
-          <ul className="mt-5 space-y-2.5">
-            {collections.map((item) => (
-              <CollectionRow
-                key={item.id}
-                item={item}
-                contractId={contractId}
-                schedules={schedules}
-                onChanged={onChanged}
-                onError={setError}
-              />
-            ))}
-          </ul>
-          <form onSubmit={addCollection} className="mt-5 flex flex-wrap gap-3">
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={received}
-              onChange={(e) => setReceived(e.target.value)}
-              className="ui-input w-32"
-            />
-            <input type="date" value={receivedAt} onChange={(e) => setReceivedAt(e.target.value)} className="ui-input w-40" />
-            <select value={scheduleId} onChange={(e) => setScheduleId(e.target.value)} className="ui-input w-40">
-              <option value="">不指定期次</option>
+      <p className="text-body text-mid-gray">
+        一期一行。改名称或计划金额点编辑；钱到了点登记确收；输错了可以删。一次性会自动生成一期。
+      </p>
+      <PinnedTable pinLeft={1} pinRight={1}>
+        <thead>
+          <tr>
+            <th>期次</th>
+            <th>计划金额</th>
+            <th>已回款</th>
+            <th>到账日</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {empty ? (
+            <tr>
+              <td colSpan={5}>
+                <EmptyHint>还没有回款计划。可以在下方增加一期，或等识别完成后自动生成。</EmptyHint>
+              </td>
+            </tr>
+          ) : (
+            <>
               {schedules.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
+                <ScheduleTableRow
+                  key={item.id}
+                  item={item}
+                  receipts={collections.filter((row) => row.schedule_id === item.id)}
+                  contractId={contractId}
+                  onChanged={onChanged}
+                  onError={setError}
+                />
               ))}
-            </select>
-            <button type="submit" className="ui-btn ui-btn-primary">
-              登记到账
-            </button>
-          </form>
-        </div>
-      </div>
+              {looseCollections.map((item) => (
+                <LooseCollectionRow
+                  key={`loose-${item.id}`}
+                  item={item}
+                  contractId={contractId}
+                  onChanged={onChanged}
+                  onError={setError}
+                />
+              ))}
+            </>
+          )}
+        </tbody>
+      </PinnedTable>
+
+      <form onSubmit={addSchedule} className="ui-card flex flex-wrap items-end gap-3 p-6">
+        <Field label="期次名称">
+          <input value={name} onChange={(e) => setName(e.target.value)} className="ui-input w-36" required />
+        </Field>
+        <Field label="计划金额（元）">
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="ui-input w-36"
+            required
+          />
+        </Field>
+        <button type="submit" className="ui-btn ui-btn-secondary">
+          增加回款计划
+        </button>
+      </form>
     </div>
   );
 }
