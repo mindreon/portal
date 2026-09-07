@@ -385,17 +385,19 @@ function RowSaveCancel({
   onSave,
   onCancel,
   saveLabel,
+  busy = false,
 }: {
   onSave: () => void;
   onCancel: () => void;
   saveLabel: string;
+  busy?: boolean;
 }) {
   return (
-    <span className="flex flex-wrap items-center gap-3">
-      <button type="button" onClick={onSave} className="ui-btn ui-btn-primary">
-        {saveLabel}
+    <span className="relative z-10 flex flex-wrap items-center gap-3">
+      <button type="button" onClick={onSave} disabled={busy} className="ui-btn ui-btn-primary">
+        {busy ? "提交中…" : saveLabel}
       </button>
-      <button type="button" onClick={onCancel} className="ui-btn ui-btn-secondary">
+      <button type="button" onClick={onCancel} disabled={busy} className="ui-btn ui-btn-secondary">
         取消
       </button>
     </span>
@@ -420,6 +422,7 @@ function ScheduleTableRow({
   const [amount, setAmount] = useState(item.amount);
   const [received, setReceived] = useState(leftover(item));
   const [receivedAt, setReceivedAt] = useState(localToday);
+  const [busy, setBusy] = useState(false);
   const singleReceipt = receipts.length === 1 ? receipts[0] : null;
 
   useEffect(() => {
@@ -429,6 +432,8 @@ function ScheduleTableRow({
   }, [item.name, item.amount, item.collected_amount, mode]);
 
   async function savePlan() {
+    if (busy) return;
+    setBusy(true);
     try {
       await api(`/api/v1/contracts/${contractId}/schedules/${item.id}`, {
         method: "PUT",
@@ -455,10 +460,14 @@ function ScheduleTableRow({
       await onChanged();
     } catch (err) {
       onError(err instanceof Error ? err.message : "保存失败");
+    } finally {
+      setBusy(false);
     }
   }
 
   async function confirmReceipt() {
+    if (busy) return;
+    setBusy(true);
     try {
       await api(`/api/v1/contracts/${contractId}/collections`, {
         method: "POST",
@@ -472,6 +481,8 @@ function ScheduleTableRow({
       await onChanged();
     } catch (err) {
       onError(err instanceof Error ? err.message : "登记失败");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -509,12 +520,27 @@ function ScheduleTableRow({
   }
 
   const receivedDate = latestReceivedAt(receipts);
+  const onEnter =
+    mode === "edit" ? savePlan : mode === "collect" ? confirmReceipt : undefined;
+
+  function handleEnter(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Enter" && onEnter) {
+      event.preventDefault();
+      onEnter();
+    }
+  }
 
   return (
     <tr>
       <td>
         {mode === "edit" ? (
-          <input value={name} onChange={(e) => setName(e.target.value)} className="ui-input w-36" required />
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={handleEnter}
+            className="ui-input w-36"
+            required
+          />
         ) : (
           <span className="font-medium">
             {item.period_no}. {item.name}
@@ -529,6 +555,7 @@ function ScheduleTableRow({
             min="0"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
+            onKeyDown={handleEnter}
             className="ui-input w-32"
             required
           />
@@ -544,6 +571,7 @@ function ScheduleTableRow({
             min="0"
             value={received}
             onChange={(e) => setReceived(e.target.value)}
+            onKeyDown={handleEnter}
             className="ui-input w-32"
             required
           />
@@ -553,18 +581,24 @@ function ScheduleTableRow({
       </td>
       <td>
         {mode === "collect" || (mode === "edit" && singleReceipt) ? (
-          <input type="date" value={receivedAt} onChange={(e) => setReceivedAt(e.target.value)} className="ui-input w-40" />
+          <input
+            type="date"
+            value={receivedAt}
+            onChange={(e) => setReceivedAt(e.target.value)}
+            onKeyDown={handleEnter}
+            className="ui-input w-40"
+          />
         ) : (
           receivedDate || "—"
         )}
       </td>
       <td>
         {mode === "edit" ? (
-          <RowSaveCancel onSave={savePlan} onCancel={() => setMode("view")} saveLabel="保存" />
+          <RowSaveCancel onSave={savePlan} onCancel={() => setMode("view")} saveLabel="保存" busy={busy} />
         ) : mode === "collect" ? (
-          <RowSaveCancel onSave={confirmReceipt} onCancel={() => setMode("view")} saveLabel="确认" />
+          <RowSaveCancel onSave={confirmReceipt} onCancel={() => setMode("view")} saveLabel="确认" busy={busy} />
         ) : (
-          <span className="flex flex-wrap items-center gap-3 whitespace-nowrap">
+          <span className="relative z-10 flex flex-wrap items-center gap-3 whitespace-nowrap">
             <ActionLink onClick={startEdit}>编辑</ActionLink>
             <ActionLink danger onClick={remove}>
               删除
