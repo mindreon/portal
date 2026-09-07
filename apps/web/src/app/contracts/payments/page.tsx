@@ -51,7 +51,7 @@ export default function ContractPaymentsPage() {
           {rows.length === 0 ? (
             <tr>
               <td colSpan={5}>
-                <EmptyHint>还没有回款。打开某份合同，在「回款」页签登记到账。</EmptyHint>
+                <EmptyHint>还没有回款。打开某份合同，在「回款」页签登记确收。</EmptyHint>
               </td>
             </tr>
           ) : (
