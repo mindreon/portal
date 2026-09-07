@@ -61,3 +61,23 @@ def logged_in(client: TestClient) -> TestClient:
     response = client.post("/api/v1/auth/dev-login", json={"name": "测试管理员"})
     assert response.status_code == 200
     return client
+
+
+@pytest.fixture
+def member_client(client: TestClient) -> TestClient:
+    """飞书普通员工：能登录、能看发票，不能进合同接口。"""
+    from app.core.security import create_session_token
+    from app.db.session import SessionLocal
+    from app.models.user import User
+
+    db = SessionLocal()
+    try:
+        user = User(name="普通员工", email="staff@localhost", role="member", feishu_open_id="ou_member")
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        token = create_session_token(user.id)
+    finally:
+        db.close()
+    client.cookies.set(get_settings().cookie_name, token)
+    return client

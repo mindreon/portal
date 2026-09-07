@@ -1,8 +1,12 @@
+import type { CurrentUser } from "@/lib/types";
+
 /**
  * 业务模块注册表。
  *
  * 新模块只在这里加一条：前端侧栏、工作台格子、面包屑、⌘K 捷径都会跟着出现。
  * 侧栏最多两层——模块 → 子功能。第三层用页面里的页签，不要再往侧栏里塞。
+ *
+ * 谁能看见哪个模块，不在这里写死，而以后端 /auth/me 返回的 modules 为准。
  */
 export type ModuleFeature = {
   href: string;
@@ -78,10 +82,20 @@ export function crumbsFor(pathname: string): Crumb[] {
   return [{ href: "/", label: "工作台" }, { href: current.href, label: current.name }, { label: featureLabel(pathname, current) }];
 }
 
-export function searchShortcuts() {
+export function modulesFor(user: CurrentUser | null): BusinessModule[] {
+  if (!user) return [];
+  return MODULES.filter((item) => (user.modules ?? []).includes(item.id));
+}
+
+export function canAccessModule(user: CurrentUser | null, moduleId: string) {
+  return Boolean(user?.modules.includes(moduleId));
+}
+
+export function searchShortcuts(user: CurrentUser | null) {
+  const visible = modulesFor(user);
   return [
     { href: "/", title: "工作台", meta: "全部模块" },
-    ...MODULES.flatMap((item) => [
+    ...visible.flatMap((item) => [
       { href: item.href, title: item.name, meta: "独立模块" },
       ...item.features
         .filter((feature) => feature.href !== item.href)

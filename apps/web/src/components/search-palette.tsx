@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { api } from "@/lib/api";
+import { useCurrentUser } from "@/lib/current-user";
 import { searchShortcuts } from "@/lib/modules";
 import type { Contract, Invoice } from "@/lib/types";
 
@@ -15,6 +16,7 @@ function match(query: string, text: string | null | undefined) {
 
 export function SearchPalette() {
   const router = useRouter();
+  const { user, canAccess } = useCurrentUser();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [contracts, setContracts] = useState<Contract[]>([]);
@@ -37,17 +39,23 @@ export function SearchPalette() {
     if (!open) return;
     setQuery("");
     inputRef.current?.focus();
-    Promise.all([api<Contract[]>("/api/v1/contracts"), api<Invoice[]>("/api/v1/invoices")])
-      .then(([nextContracts, nextInvoices]) => {
-        setContracts(nextContracts);
-        setInvoices(nextInvoices);
-      })
-      .catch(() => undefined);
-  }, [open]);
+    const jobs: Promise<void>[] = [];
+    if (canAccess("contracts")) {
+      jobs.push(api<Contract[]>("/api/v1/contracts").then(setContracts));
+    } else {
+      setContracts([]);
+    }
+    if (canAccess("invoices")) {
+      jobs.push(api<Invoice[]>("/api/v1/invoices").then(setInvoices));
+    } else {
+      setInvoices([]);
+    }
+    Promise.all(jobs).catch(() => undefined);
+  }, [open, canAccess]);
 
   const hits = useMemo(() => {
     const q = query.trim();
-    const shortcuts = searchShortcuts();
+    const shortcuts = searchShortcuts(user);
     const pages = q ? shortcuts.filter((item) => match(q, item.title) || match(q, item.meta)) : shortcuts;
     const contractHits = contracts
       .filter(
@@ -73,7 +81,7 @@ export function SearchPalette() {
         meta: `发票 · ${item.invoice_no}`,
       }));
     return [...pages, ...contractHits, ...invoiceHits];
-  }, [query, contracts, invoices]);
+  }, [query, contracts, invoices, user]);
 
   function go(href: string) {
     setOpen(false);

@@ -20,5 +20,7 @@ class CurrentUserOut(BaseModel):
     email: str | None
     avatar_url: str | None
     role: str
+    # 当前能进哪些业务模块，前端用它画菜单。后端仍会再拦一次。
+    modules: list[str]
 
     model_config = {"from_attributes": True}

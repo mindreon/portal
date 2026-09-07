@@ -30,6 +30,10 @@ class Settings(BaseSettings):
 
     # 没配飞书 App ID 时，前端只显示开发登录
     auth_allow_dev_login: bool = True
+    # 飞书登录后谁算管理员（能看合同）。逗号分隔，大小写不敏感。
+    # 填企业邮箱或飞书 open_id 都行。不填则飞书用户都是普通成员。
+    auth_admin_emails: str = ""
+    auth_admin_open_ids: str = ""
     feishu_app_id: str = ""
     feishu_app_secret: str = ""
     feishu_redirect_uri: str = "http://localhost/api/v1/auth/feishu/callback"
@@ -49,8 +53,27 @@ class Settings(BaseSettings):
         return bool(self.feishu_app_id and self.feishu_app_secret)
 
     @property
+    def admin_emails(self) -> set[str]:
+        return _csv_set(self.auth_admin_emails, lowercase=True)
+
+    @property
+    def admin_open_ids(self) -> set[str]:
+        return _csv_set(self.auth_admin_open_ids, lowercase=False)
+
+    @property
     def qwen_ocr_enabled(self) -> bool:
         return bool(self.qwen_api_key.strip())
+
+
+def _csv_set(value: str, *, lowercase: bool) -> set[str]:
+    """把 .env 里逗号分隔的名单拆成集合，空项丢掉。"""
+    items: set[str] = set()
+    for part in value.split(","):
+        item = part.strip()
+        if not item:
+            continue
+        items.add(item.lower() if lowercase else item)
+    return items
 
 
 @lru_cache

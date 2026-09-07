@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
 
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { LogoLockup } from "@/components/logo";
 import { SearchPalette } from "@/components/search-palette";
 import { api } from "@/lib/api";
-import { isFeatureActive, MODULES, moduleByPath } from "@/lib/modules";
-import type { CurrentUser } from "@/lib/types";
+import { useCurrentUser } from "@/lib/current-user";
+import { isFeatureActive, moduleByPath } from "@/lib/modules";
 
 function NavLink({
   href,
@@ -44,17 +43,29 @@ function ChipLink({ href, label, active }: { href: string; label: string; active
   );
 }
 
+function ForbiddenNotice({ name }: { name: string }) {
+  return (
+    <div className="ui-card max-w-xl p-8">
+      <p className="eyebrow">403</p>
+      <h2 className="heading mt-2">没有访问权限</h2>
+      <p className="mt-3 text-body text-mid-gray">
+        「{name}」只开放给管理员。你仍然可以使用发票等其它已授权模块。
+      </p>
+      <Link href="/" className="ui-btn ui-btn-primary mt-6 inline-flex">
+        返回工作台
+      </Link>
+    </div>
+  );
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<CurrentUser | null>(null);
+  const { user, ready, modules, canAccess } = useCurrentUser();
   const current = moduleByPath(pathname);
-
-  useEffect(() => {
-    api<CurrentUser>("/api/v1/auth/me")
-      .then(setUser)
-      .catch(() => undefined);
-  }, []);
+  const forbidden = Boolean(ready && current && !canAccess(current.id));
+  // 没权限时不要展开合同子菜单，否则等于把入口又露出来了。
+  const navModule = forbidden ? null : current;
 
   async function logout() {
     await api("/api/v1/auth/logout", { method: "POST" });
@@ -69,21 +80,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <LogoLockup />
         </Link>
 
-        {current ? (
+        {navModule ? (
           <div className="mt-10 flex-1">
             <Link href="/" className="text-body text-mid-gray hover:text-ink">
               全部模块
             </Link>
-            <p className="eyebrow mt-6">{current.hint}</p>
-            <p className="mt-2 text-[16px] font-semibold tracking-[-0.4px] text-ink">{current.name}</p>
+            <p className="eyebrow mt-6">{navModule.hint}</p>
+            <p className="mt-2 text-[16px] font-semibold tracking-[-0.4px] text-ink">{navModule.name}</p>
             <nav className="mt-5 space-y-1.5">
-              {current.features.map((feature) => (
+              {navModule.features.map((feature) => (
                 <NavLink
                   key={feature.href}
                   href={feature.href}
                   label={feature.label}
                   hint={feature.hint}
-                  active={isFeatureActive(pathname, feature, current.features)}
+                  active={isFeatureActive(pathname, feature, navModule.features)}
                 />
               ))}
             </nav>
@@ -91,7 +102,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         ) : (
           <nav className="mt-10 flex-1 space-y-1.5">
             <NavLink href="/" label="工作台" hint="全部模块" active={pathname === "/"} />
-            {MODULES.map((item) => (
+            {modules.map((item) => (
               <NavLink key={item.id} href={item.href} label={item.name} hint={item.hint} active={false} />
             ))}
           </nav>
@@ -117,22 +128,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
         <nav className="flex gap-2 overflow-x-auto px-6 pb-3 lg:hidden">
           <ChipLink href="/" label="工作台" active={pathname === "/"} />
-          {current
-            ? current.features.map((feature) => (
+          {navModule
+            ? navModule.features.map((feature) => (
                 <ChipLink
                   key={feature.href}
                   href={feature.href}
                   label={feature.label}
-                  active={isFeatureActive(pathname, feature, current.features)}
+                  active={isFeatureActive(pathname, feature, navModule.features)}
                 />
               ))
-            : MODULES.map((item) => <ChipLink key={item.id} href={item.href} label={item.name} active={false} />)}
+            : modules.map((item) => <ChipLink key={item.id} href={item.href} label={item.name} active={false} />)}
         </nav>
         <header className="flex flex-wrap items-center justify-between gap-4 px-6 py-5 sm:px-10">
           <Breadcrumbs />
           <SearchPalette />
         </header>
-        <main className="mx-auto w-full max-w-[1280px] flex-1 px-6 pb-12 sm:px-10">{children}</main>
+        <main className="mx-auto w-full max-w-[1280px] flex-1 px-6 pb-12 sm:px-10">
+          {forbidden && current ? <ForbiddenNotice name={current.name} /> : children}
+        </main>
       </div>
     </div>
   );

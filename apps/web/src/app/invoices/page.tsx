@@ -22,7 +22,7 @@ export default function InvoicesPage() {
       <PageHeader
         eyebrow="Invoices"
         title="发票"
-        description="独立模块。发票可以单独开，也可以在表单里选择关联某份合同。"
+        description="独立模块。发票可以单独开，不必先有合同。"
         action={
           <Link href="/invoices/new" className="ui-btn ui-btn-primary">
             新建发票

@@ -4,6 +4,8 @@ export type CurrentUser = {
   email: string | null;
   avatar_url: string | null;
   role: string;
+  /** 当前账号能进的模块 id，和侧栏菜单对应。 */
+  modules: string[];
 };
 
 export type AuthConfig = {

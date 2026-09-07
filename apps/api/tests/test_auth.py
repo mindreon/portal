@@ -19,6 +19,8 @@ def test_dev_login_and_me(client: TestClient) -> None:
     assert login.status_code == 200
     assert login.json()["name"] == "王同学"
     assert login.json()["role"] == "admin"
+    assert "contracts" in login.json()["modules"]
+    assert "invoices" in login.json()["modules"]
 
     me = client.get("/api/v1/auth/me")
     assert me.status_code == 200

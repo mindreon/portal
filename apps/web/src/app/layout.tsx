@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 
+import { CurrentUserProvider } from "@/lib/current-user";
 import "./globals.css";
 
 const geist = Geist({
@@ -17,7 +18,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-CN">
-      <body className={`${geist.variable} ${geist.className} antialiased`}>{children}</body>
+      <body className={`${geist.variable} ${geist.className} antialiased`}>
+        <CurrentUserProvider>{children}</CurrentUserProvider>
+      </body>
     </html>
   );
 }
