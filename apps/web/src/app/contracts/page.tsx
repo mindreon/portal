@@ -116,7 +116,7 @@ export default function ContractsPage() {
         </div>
       </form>
 
-      <PinnedTable pinLeft={1} pinRight={1} minWidth={1080}>
+      <PinnedTable pinLeft={1} pinRight={1} minWidth={1280}>
         <thead>
           <tr>
             <th>文件名</th>
@@ -156,8 +156,8 @@ export default function ContractsPage() {
                 <td>
                   <PartyStack a={row.party_a} b={row.party_b || row.counterparty} />
                 </td>
-                <td className="whitespace-nowrap tabular-nums">{money(row.amount, row.currency)}</td>
-                <td className="whitespace-nowrap tabular-nums">{money(row.collected_amount, row.currency)}</td>
+                <td className="whitespace-nowrap tabular-nums min-w-[9rem]">{money(row.amount, row.currency)}</td>
+                <td className="whitespace-nowrap tabular-nums min-w-[7rem]">{money(row.collected_amount, row.currency)}</td>
                 <td>
                   {isParsing(row.parse_status) || row.parse_status === "failed" ? (
                     <StatusBadge kind="parse" value={row.parse_status} />

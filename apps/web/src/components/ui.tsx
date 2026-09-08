@@ -49,9 +49,9 @@ export function TextLink({ href, children }: { href: string; children: React.Rea
 /** 甲方、乙方各占一行，长公司名不会把后面的金额挤换行。 */
 export function PartyStack({ a, b }: { a?: string | null; b?: string | null }) {
   return (
-    <div>
+    <div className="min-w-[220px] space-y-2">
       <p>{a?.trim() || "—"}</p>
-      <p className="mt-1">{b?.trim() || "—"}</p>
+      <p>{b?.trim() || "—"}</p>
     </div>
   );
 }
