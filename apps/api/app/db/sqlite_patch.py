@@ -31,3 +31,12 @@ def ensure_sqlite_columns() -> None:
                 conn.execute(
                     text("ALTER TABLE contracts ADD COLUMN subject_name VARCHAR(255) DEFAULT ''")
                 )
+        if "users" in tables:
+            cols = {item["name"] for item in inspector.get_columns("users")}
+            if "modules" not in cols:
+                conn.execute(
+                    text("ALTER TABLE users ADD COLUMN modules VARCHAR(255) DEFAULT 'invoices'")
+                )
+                conn.execute(
+                    text("UPDATE users SET modules = 'contracts,invoices' WHERE role = 'admin'")
+                )

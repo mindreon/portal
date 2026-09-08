@@ -49,7 +49,7 @@ function ForbiddenNotice({ name }: { name: string }) {
       <p className="eyebrow">403</p>
       <h2 className="heading mt-2">没有访问权限</h2>
       <p className="mt-3 text-body text-mid-gray">
-        「{name}」只开放给管理员。你仍然可以使用发票等其它已授权模块。
+        你的账号还不能进入「{name}」。需要开通的话，请让管理员打开左下角的「权限管理」，给对应模块打勾。
       </p>
       <Link href="/" className="ui-btn ui-btn-primary mt-6 inline-flex">
         返回工作台
@@ -111,6 +111,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="mt-auto pt-10 text-body">
           <p className="font-medium text-ink">{user?.name ?? "加载中…"}</p>
           <p className="mt-1.5 text-mid-gray">{user?.role === "admin" ? "管理员" : "成员"}</p>
+          {user?.role === "admin" ? (
+            <Link href="/settings/access" className="mt-3 block font-medium text-ink underline-offset-4 hover:underline">
+              权限管理
+            </Link>
+          ) : null}
           <button type="button" onClick={logout} className="mt-4 font-medium text-ink underline-offset-4 hover:underline">
             退出登录
           </button>
@@ -137,7 +142,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   active={isFeatureActive(pathname, feature, navModule.features)}
                 />
               ))
-            : modules.map((item) => <ChipLink key={item.id} href={item.href} label={item.name} active={false} />)}
+            : (
+                <>
+                  {modules.map((item) => <ChipLink key={item.id} href={item.href} label={item.name} active={false} />)}
+                  {user?.role === "admin" ? <ChipLink href="/settings/access" label="权限" active={false} /> : null}
+                </>
+              )}
         </nav>
         <header className="flex flex-wrap items-center justify-between gap-4 px-6 py-5 sm:px-10">
           <Breadcrumbs />

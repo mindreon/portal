@@ -20,7 +20,7 @@ from app.core.config import get_settings
 from app.db.base import Base
 from app.db.session import engine
 from app.db.sqlite_patch import ensure_sqlite_columns
-from app.modules import auth, contracts, imports, invoices
+from app.modules import auth, contracts, imports, invoices, users
 
 
 @asynccontextmanager
@@ -49,6 +49,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router, prefix="/api/v1")
+app.include_router(users.router, prefix="/api/v1")
 app.include_router(imports.router, prefix="/api/v1")
 app.include_router(contracts.router, prefix="/api/v1")
 app.include_router(invoices.router, prefix="/api/v1")
