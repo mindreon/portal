@@ -1,0 +1,423 @@
+# Theme tokens
+
+## Part 1 — Compact token summary
+
+**Approach:** Tailwind CSS v4 `@theme` in `apps/web/src/app/globals.css`. Geist via `next/font/google`. No `tailwind.config.*`.
+
+### Colors
+
+| Token | Value | Role |
+| --- | --- | --- |
+| `--color-canvas` / `bg-canvas` | `#f5f5f5` | Page background, muted fills, secondary buttons, search trigger |
+| `--color-paper` / `bg-paper` | `#ffffff` | Cards, popovers, sidebar active item |
+| `--color-surface-alt` / `bg-surface-alt` | `#fafafa` | Sidebar, table header |
+| `--color-ink` / `text-ink` | `#0a0a0a` | Primary text, headings, primary button fill |
+| `--color-ink-soft` / `text-ink-soft` | `#171717` | Softer filled chips / solid badges |
+| `--color-mid-gray` / `text-mid-gray` | `#737373` | Muted body, placeholders, eyebrows |
+| `--color-hairline` / `border-hairline` | `#e5e5e5` | Card borders, table rules |
+| `--color-ember` / `text-ember` | `#e7000b` | Destructive / error only |
+
+No dark theme. Selection invert: ink background + paper text.
+
+### Typography
+
+- Family: Geist (`--font-geist-ui`) + PingFang SC / Noto Sans SC
+- Weights: 400, 500, 600
+- Body: 14px / 1.43
+- caption / `.eyebrow`: 12px / 500 / 0.6px tracking / uppercase / mid-gray
+- heading-sm: 24px / 600 / -0.6px
+- heading: 30px / 600 / -0.75px
+- heading-lg: 36px / 600 / -0.9px
+- display: 48px / 600 / -2.4px
+- stat-value: `clamp(24px, 2vw, 30px)` / 600
+
+### Spacing
+
+4 / 8 / 12 / 16 / 20 / 24 / 32 / 48 px. Page padding 24–40px. Card padding 24px. Sidebar 264px. Content max 1280px.
+
+### Radius
+
+- cards: 24px (`--radius-cards`, `.ui-card`)
+- buttons / inputs / badges / nav items: 18px
+- nested (table hover rows, search hits): 10px
+- small: 6px
+- logo mark: 8px
+
+### Shadows
+
+`--shadow-subtle`: `0 0 0 1px rgba(23,23,23,0.05), 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)`
+
+### Breakpoints (Tailwind defaults)
+
+- `sm` 640px — two-col module cards
+- `lg` 1024px — desktop sidebar vs mobile chips
+
+---
+
+## Part 2 — Raw source dumps
+
+### `apps/web/src/app/globals.css`
+
+```css
+@import "tailwindcss";
+
+@theme {
+  --color-canvas: #f5f5f5;
+  --color-paper: #ffffff;
+  --color-surface-alt: #fafafa;
+  --color-ink: #0a0a0a;
+  --color-ink-soft: #171717;
+  --color-mid-gray: #737373;
+  --color-hairline: #e5e5e5;
+  --color-ember: #e7000b;
+
+  --font-geist: var(--font-geist-ui), "PingFang SC", "Noto Sans SC", ui-sans-serif, system-ui, sans-serif;
+
+  --text-caption: 12px;
+  --text-body: 14px;
+  --text-body-lg: 16px;
+  --text-subheading: 18px;
+  --text-heading-sm: 24px;
+  --text-heading: 30px;
+  --text-heading-lg: 36px;
+  --text-display: 48px;
+
+  --spacing-4: 4px;
+  --spacing-8: 8px;
+  --spacing-12: 12px;
+  --spacing-16: 16px;
+  --spacing-20: 20px;
+  --spacing-24: 24px;
+  --spacing-32: 32px;
+  --spacing-48: 48px;
+
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-2xl: 18px;
+  --radius-3xl: 24px;
+
+  --shadow-subtle: 0 0 0 1px rgba(23, 23, 23, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1),
+    0 1px 2px -1px rgba(0, 0, 0, 0.1);
+}
+
+:root {
+  --color-canvas: #f5f5f5;
+  --color-paper: #ffffff;
+  --color-surface-alt: #fafafa;
+  --color-ink: #0a0a0a;
+  --color-ink-soft: #171717;
+  --color-mid-gray: #737373;
+  --color-hairline: #e5e5e5;
+  --color-ember: #e7000b;
+  --radius-cards: 24px;
+  --radius-buttons: 18px;
+  --page-max-width: 1280px;
+  --shadow-subtle: 0 0 0 1px rgba(23, 23, 23, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1),
+    0 1px 2px -1px rgba(0, 0, 0, 0.1);
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  color: var(--color-ink);
+  background: var(--color-canvas);
+  font-family: var(--font-geist);
+  font-size: 14px;
+  line-height: 1.43;
+  font-feature-settings: "ss01" 1, "cv11" 1;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color-scheme: light;
+}
+
+a {
+  color: inherit;
+}
+
+::selection {
+  background: var(--color-ink);
+  color: var(--color-paper);
+}
+
+.eyebrow {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.33;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--color-mid-gray);
+}
+
+.heading {
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.75px;
+  color: var(--color-ink);
+}
+
+.heading-lg {
+  font-size: 36px;
+  font-weight: 600;
+  line-height: 1.11;
+  letter-spacing: -0.9px;
+  color: var(--color-ink);
+}
+
+.heading-display {
+  font-size: 48px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -2.4px;
+  color: var(--color-ink);
+}
+
+.heading-sm {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.33;
+  letter-spacing: -0.6px;
+  color: var(--color-ink);
+}
+
+.stat-value {
+  font-size: clamp(24px, 2vw, 30px);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.75px;
+  color: var(--color-ink);
+}
+
+.ui-card {
+  background: var(--color-paper);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-cards);
+  box-shadow: var(--shadow-subtle);
+}
+
+.ui-input {
+  width: 100%;
+  min-height: 40px;
+  border-radius: 18px;
+  border: 1px solid transparent;
+  background: var(--color-canvas);
+  padding: 10px 14px;
+  color: var(--color-ink);
+  outline: none;
+}
+
+.ui-input::placeholder {
+  color: var(--color-mid-gray);
+}
+
+.ui-input:focus {
+  background: var(--color-paper);
+  border-color: var(--color-hairline);
+}
+
+textarea.ui-input {
+  border-radius: 18px;
+}
+
+.ui-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  border-radius: 18px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  border: 0;
+}
+
+.ui-btn:disabled {
+  opacity: 0.5;
+}
+
+.ui-btn-primary {
+  background: var(--color-ink);
+  color: #fafafa;
+}
+
+.ui-btn-secondary {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+.ui-btn-outline {
+  background: transparent;
+  color: var(--color-ink);
+  border: 1px solid var(--color-hairline);
+}
+
+.ui-btn-danger {
+  background: transparent;
+  color: var(--color-ember);
+}
+
+.ui-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  color: var(--color-ink);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.ui-check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-ink);
+}
+
+.ui-check input:disabled {
+  cursor: not-allowed;
+}
+
+.search-trigger {
+  display: inline-flex;
+  min-width: min(320px, 100%);
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 40px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--color-canvas);
+  padding: 10px 14px;
+  color: var(--color-mid-gray);
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.search-trigger kbd {
+  border-radius: 10px;
+  background: var(--color-paper);
+  padding: 2px 8px;
+  font-size: 12px;
+  letter-spacing: 0.6px;
+  color: var(--color-ink);
+}
+
+.search-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  justify-content: center;
+  background: oklab(0.145 0 0 / 0.12);
+  padding: 12vh 24px 24px;
+}
+
+.search-panel {
+  width: min(560px, 100%);
+  padding: 24px;
+}
+
+.search-hit {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.ui-table {
+  width: 100%;
+  text-align: left;
+  font-size: 14px;
+  line-height: 1.43;
+}
+
+.ui-pinned-table {
+  overflow-x: auto;
+}
+
+.ui-pinned-table .ui-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 100%;
+}
+
+.ui-pinned-table .ui-table th,
+.ui-pinned-table .ui-table td {
+  border-bottom: 1px solid var(--color-hairline);
+  background-color: var(--color-paper);
+}
+
+.ui-pinned-table .ui-table thead th {
+  background-color: var(--color-surface-alt);
+}
+
+.ui-pinned-table .ui-table tbody tr {
+  border-top: 0;
+}
+
+.ui-table-pin {
+  position: sticky;
+  z-index: 2;
+  background-color: #ffffff;
+  background-color: var(--color-paper);
+}
+
+.ui-pinned-table thead .ui-table-pin {
+  z-index: 3;
+  background-color: #fafafa;
+  background-color: var(--color-surface-alt);
+}
+
+.ui-table-pin-edge-left {
+  box-shadow: 8px 0 8px -8px rgba(0, 0, 0, 0.16);
+}
+
+.ui-table-pin-edge-right {
+  box-shadow: -8px 0 8px -8px rgba(0, 0, 0, 0.16);
+}
+
+.ui-table thead {
+  background: var(--color-surface-alt);
+  color: var(--color-mid-gray);
+}
+
+.ui-table th,
+.ui-table td {
+  padding: 14px 24px;
+  vertical-align: top;
+}
+
+.ui-table th {
+  font-weight: 500;
+}
+
+.ui-table tbody tr {
+  border-top: 1px solid var(--color-hairline);
+}
+
+.search-hit:hover,
+.search-hit:focus-visible {
+  background: var(--color-canvas);
+}
+```
+
+### `apps/web/src/app/layout.tsx` (font wiring)
+
+Geist from `next/font/google`, subsets latin, weights 400/500/600, CSS variable `--font-geist-ui`. Body: `${geist.variable} ${geist.className} antialiased`. html `lang="zh-CN"`.
+
+No `tailwind.config.ts`. PostCSS: `@tailwindcss/postcss`.
