@@ -352,7 +352,7 @@ textarea.ui-input {
 .ui-table th,
 .ui-table td {
   padding: 14px 24px;
-  vertical-align: top;
+  vertical-align: middle;
 }
 
 /* 金额列：表格会按比例挤列宽，min-width 经常被忽略。nowrap + width:1% 让这一列跟着数字变宽，不把 ¥ 拆行。 */
@@ -363,17 +363,20 @@ textarea.ui-input {
   width: 1%;
 }
 
-/* 操作列：链接必须同一行。flex-wrap 会先折行，钉列再按折行后的窄宽度计算，就会一直叠着。 */
+/* 操作列：同一行，格子里水平居中；垂直居中跟其它列一起走。 */
 .ui-table th.ui-actions,
 .ui-table td.ui-actions {
   white-space: nowrap;
   width: 1%;
+  text-align: center;
+  vertical-align: middle;
 }
 
 .ui-actions-row {
   display: inline-flex;
   flex-wrap: nowrap;
   align-items: center;
+  justify-content: center;
   gap: 1rem;
   white-space: nowrap;
 }
