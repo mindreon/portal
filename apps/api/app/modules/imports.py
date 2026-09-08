@@ -1,5 +1,5 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
@@ -50,22 +50,24 @@ def create_import(
     return _batch_out(db, batch.id)
 
 
-@router.get("/files/{file_id}/download")
+@router.get("/files/{file_id}/download", response_model=None)
 def download_file(
     file_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
-) -> FileResponse:
-    return _file_response(db, file_id, inline=False)
+) -> FileResponse | Response:
+    return _file_response(db, file_id, request, inline=False)
 
 
-@router.get("/files/{file_id}/preview")
+@router.get("/files/{file_id}/preview", response_model=None)
 def preview_file(
     file_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
-) -> FileResponse:
-    return _file_response(db, file_id, inline=True)
+) -> FileResponse | Response:
+    return _file_response(db, file_id, request, inline=True)
 
 
 @router.get("/{batch_id}", response_model=ImportOut)
@@ -91,11 +93,17 @@ def confirm_import(
     return _batch_out(db, batch_id)
 
 
-def _file_response(db: Session, file_id: int, *, inline: bool) -> FileResponse:
+def _file_response(db: Session, file_id: int, request: Request, *, inline: bool) -> FileResponse | Response:
     row = db.get(ContractFile, file_id)
     if row is None:
         raise HTTPException(status_code=404, detail="附件不存在")
-    return original_file_response(row.stored_path, row.original_name, inline=inline)
+    return original_file_response(
+        row.stored_path,
+        row.original_name,
+        inline=inline,
+        content_hash=row.content_hash,
+        request=request,
+    )
 
 
 def _parse_ids(raw: str | None) -> list[int]:
