@@ -75,7 +75,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-canvas lg:grid lg:grid-cols-[264px_minmax(0,1fr)]">
-      <aside className="hidden flex-col bg-surface-alt px-6 py-8 lg:flex lg:min-h-screen">
+      <aside className="hidden flex-col bg-surface-alt px-6 py-8 pb-20 lg:flex lg:min-h-screen">
         <Link href="/" className="inline-block">
           <LogoLockup />
         </Link>
