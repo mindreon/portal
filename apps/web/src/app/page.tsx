@@ -8,27 +8,25 @@ import { Icon, ModuleIconTile, type IconName } from "@/components/icons";
 import { PageHeader } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useCurrentUser } from "@/lib/current-user";
-import type { Contract, Invoice } from "@/lib/types";
+import type { ContractSummary, InvoiceSummary } from "@/lib/types";
 
 export default function HomePage() {
   const { ready, modules, canAccess } = useCurrentUser();
-  const [contracts, setContracts] = useState<Contract[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [contractSummary, setContractSummary] = useState<ContractSummary | null>(null);
+  const [invoiceSummary, setInvoiceSummary] = useState<InvoiceSummary | null>(null);
 
   useEffect(() => {
     if (!ready) return;
     const jobs: Promise<void>[] = [];
     if (canAccess("contracts")) {
-      jobs.push(api<Contract[]>("/api/v1/contracts").then(setContracts));
+      jobs.push(api<ContractSummary>("/api/v1/contracts/summary").then(setContractSummary));
     }
     if (canAccess("invoices")) {
-      jobs.push(api<Invoice[]>("/api/v1/invoices").then(setInvoices));
+      jobs.push(api<InvoiceSummary>("/api/v1/invoices/summary").then(setInvoiceSummary));
     }
     Promise.all(jobs).catch(() => undefined);
   }, [ready, canAccess]);
 
-  const activeContracts = contracts.filter((item) => item.status === "active").length;
-  const unpaidInvoices = invoices.filter((item) => item.status === "issued").length;
   const showContracts = canAccess("contracts");
   const showInvoices = canAccess("invoices");
 
@@ -56,13 +54,13 @@ export default function HomePage() {
       {showContracts || showInvoices ? (
         <section className="mt-8 grid gap-6 sm:grid-cols-3">
           {showContracts ? (
-            <StatCard title="合同总数" value={String(contracts.length)} href="/contracts" icon="file-text" />
+            <StatCard title="合同总数" value={String(contractSummary?.count ?? 0)} href="/contracts" icon="file-text" />
           ) : null}
           {showContracts ? (
-            <StatCard title="履约中" value={String(activeContracts)} href="/contracts" icon="file-text" />
+            <StatCard title="履约中" value={String(contractSummary?.active_count ?? 0)} href="/contracts" icon="file-text" />
           ) : null}
           {showInvoices ? (
-            <StatCard title="待收款发票" value={String(unpaidInvoices)} href="/invoices" icon="receipt" />
+            <StatCard title="待收款发票" value={String(invoiceSummary?.issued_count ?? 0)} href="/invoices" icon="receipt" />
           ) : null}
         </section>
       ) : null}

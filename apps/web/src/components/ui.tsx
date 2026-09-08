@@ -46,6 +46,49 @@ export function TextLink({ href, children }: { href: string; children: React.Rea
   );
 }
 
+/** 列表默认一页几条。前端只请求这一页，搜索和下拉也走同一个分页接口。 */
+export const PAGE_SIZE = 10;
+
+export function Pager({
+  page,
+  total,
+  pageSize = PAGE_SIZE,
+  onPage,
+}: {
+  page: number;
+  total: number;
+  pageSize?: number;
+  onPage: (next: number) => void;
+}) {
+  if (total <= 0) return null;
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  return (
+    <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+      <p className="text-body text-mid-gray">
+        共 {total} 条 · 每页 {pageSize} 条 · 第 {page} / {pages} 页
+      </p>
+      <div className="flex flex-wrap gap-3">
+        <button
+          type="button"
+          className="ui-btn ui-btn-secondary"
+          disabled={page <= 1}
+          onClick={() => onPage(page - 1)}
+        >
+          上一页
+        </button>
+        <button
+          type="button"
+          className="ui-btn ui-btn-secondary"
+          disabled={page >= pages}
+          onClick={() => onPage(page + 1)}
+        >
+          下一页
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** 甲方、乙方各占一行。前面标甲/乙，扫一眼就能对上。 */
 export function PartyStack({ a, b }: { a?: string | null; b?: string | null }) {
   return (

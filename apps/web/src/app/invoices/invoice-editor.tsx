@@ -5,9 +5,9 @@ import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { Field, FormError, PageHeader } from "@/components/ui";
-import { api } from "@/lib/api";
+import { api, withQuery } from "@/lib/api";
 import { useCurrentUser } from "@/lib/current-user";
-import { INVOICE_STATUS_LABEL, type Contract, type Invoice } from "@/lib/types";
+import { INVOICE_STATUS_LABEL, type Contract, type Invoice, type PageResult } from "@/lib/types";
 
 const EMPTY = {
   title: "",
@@ -36,16 +36,12 @@ export function InvoiceEditor({
   const canLinkContract = canAccess("contracts");
   const [form, setForm] = useState({ ...EMPTY, contract_id: defaultContractId ?? "" });
   const [contracts, setContracts] = useState<Contract[]>([]);
+  const [contractQuery, setContractQuery] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!ready) return;
-    if (canLinkContract) {
-      api<Contract[]>("/api/v1/contracts").then(setContracts).catch(() => undefined);
-    } else {
-      setContracts([]);
-    }
     if (!invoiceId) return;
     api<Invoice>(`/api/v1/invoices/${invoiceId}`).then((item) => {
       setForm({
@@ -63,7 +59,39 @@ export function InvoiceEditor({
         contract_id: item.contract_id ? String(item.contract_id) : "",
       });
     });
-  }, [invoiceId, ready, canLinkContract]);
+  }, [invoiceId, ready]);
+
+  useEffect(() => {
+    if (!ready || !canLinkContract) {
+      setContracts([]);
+      return;
+    }
+    const linkedId = form.contract_id;
+    const handle = window.setTimeout(async () => {
+      try {
+        const page = await api<PageResult<Contract>>(
+          withQuery("/api/v1/contracts", {
+            q: contractQuery.trim() || undefined,
+            page: 1,
+            page_size: 20,
+          }),
+        );
+        let items = page.items;
+        if (linkedId && !items.some((item) => String(item.id) === linkedId)) {
+          try {
+            const linked = await api<Contract>(`/api/v1/contracts/${linkedId}`);
+            items = [linked, ...items];
+          } catch {
+            // 关联合同可能已删除，下拉里就不硬塞了。
+          }
+        }
+        setContracts(items);
+      } catch {
+        setContracts([]);
+      }
+    }, contractQuery.trim() ? 200 : 0);
+    return () => window.clearTimeout(handle);
+  }, [ready, canLinkContract, contractQuery, form.contract_id]);
 
   function update(name: keyof typeof EMPTY, value: string) {
     setForm((current) => ({ ...current, [name]: value }));
@@ -149,16 +177,23 @@ export function InvoiceEditor({
           </Field>
         </div>
         {canLinkContract ? (
-          <Field label="关联合同（可选）">
+          <div className="block text-body text-mid-gray">
+            <span className="mb-2 block font-medium text-ink">关联合同（可选）</span>
+            <input
+              value={contractQuery}
+              onChange={(e) => setContractQuery(e.target.value)}
+              placeholder="搜索合同编号或名称"
+              className="ui-input mb-3"
+            />
             <select value={form.contract_id} onChange={(e) => update("contract_id", e.target.value)} className="ui-input">
               <option value="">不关联</option>
               {contracts.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.contract_no} · {item.title}
+                  {item.contract_no || `未编号 · ${item.id}`} · {item.title}
                 </option>
               ))}
             </select>
-          </Field>
+          </div>
         ) : null}
         <Field label="备注">
           <textarea value={form.notes} onChange={(e) => update("notes", e.target.value)} rows={4} className="ui-input" />

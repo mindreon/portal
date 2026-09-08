@@ -95,6 +95,8 @@ class ContractSummary(BaseModel):
     total_amount: Decimal
     collected_amount: Decimal
     outstanding_amount: Decimal
+    # 正在识别的合同份数。列表翻页后当前页可能看不到它们，首页/列表用这个决定要不要开 SSE。
+    parsing_count: int = 0
 
 
 class CollectionRow(CollectionOut):
@@ -103,3 +105,11 @@ class CollectionRow(CollectionOut):
     party_a: str = ""
     party_b: str = ""
     schedule_name: str | None = None
+
+
+class CollectionPageOut(BaseModel):
+    items: list[CollectionRow]
+    total: int
+    page: int
+    page_size: int
+    total_amount: Decimal = Decimal("0")

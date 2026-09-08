@@ -3,12 +3,14 @@ from decimal import Decimal
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func, or_, select
+from sqlalchemy import Select, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.sql.elements import ColumnElement
 
 from app.core.access import require_module
 from app.core.deps import get_current_user
+from app.core.paging import clamp_page
 from app.db.session import get_db
 from app.models.contract import Contract
 from app.models.document import ContractFile
@@ -19,6 +21,7 @@ from app.schemas.contract import (
     OUR_ROLES,
     CollectionIn,
     CollectionOut,
+    CollectionPageOut,
     CollectionRow,
     ContractIn,
     ContractOut,
@@ -27,6 +30,7 @@ from app.schemas.contract import (
     ScheduleIn,
     ScheduleOut,
 )
+from app.schemas.page import PageOut
 from app.services.extract import derive_counterparty, derive_our_role, normalize_contract_no
 
 router = APIRouter(
@@ -93,43 +97,106 @@ def _apply(contract: Contract, payload: ContractIn) -> None:
         setattr(contract, key, value)
 
 
-@router.get("", response_model=list[ContractOut])
-def list_contracts(
-    party: str | None = None,
-    date_from: date | None = None,
-    date_to: date | None = None,
-    db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
-) -> list[ContractOut]:
-    query = select(Contract).options(
-        selectinload(Contract.invoices),
-        selectinload(Contract.collections),
-        selectinload(Contract.files),
-    )
-    if party and party.strip():
-        needle = f"%{party.strip().lower()}%"
-        query = query.where(
-            or_(
-                func.lower(Contract.party_a).like(needle),
-                func.lower(Contract.party_b).like(needle),
-                func.lower(Contract.counterparty).like(needle),
-                func.lower(Contract.subject_name).like(needle),
-                func.lower(Contract.title).like(needle),
-                Contract.id.in_(
-                    select(ContractFile.contract_id).where(
-                        ContractFile.contract_id.is_not(None),
-                        func.lower(ContractFile.original_name).like(needle),
-                    )
-                ),
+def _contract_text_filter(text: str | None) -> ColumnElement[bool] | None:
+    """按关键字搜编号、名称、甲乙方、文件名。搜索框和列表筛选共用。"""
+    if not text or not text.strip():
+        return None
+    needle = f"%{text.strip().lower()}%"
+    return or_(
+        func.lower(func.coalesce(Contract.contract_no, "")).like(needle),
+        func.lower(Contract.party_a).like(needle),
+        func.lower(Contract.party_b).like(needle),
+        func.lower(Contract.counterparty).like(needle),
+        func.lower(Contract.subject_name).like(needle),
+        func.lower(Contract.title).like(needle),
+        Contract.id.in_(
+            select(ContractFile.contract_id).where(
+                ContractFile.contract_id.is_not(None),
+                func.lower(ContractFile.original_name).like(needle),
             )
-        )
+        ),
+    )
+
+
+def _filtered_contracts(
+    q: str | None,
+    party: str | None,
+    date_from: date | None,
+    date_to: date | None,
+) -> Select[tuple[Contract]]:
+    query = select(Contract)
+    for text in (q, party):
+        cond = _contract_text_filter(text)
+        if cond is not None:
+            query = query.where(cond)
     effective = func.coalesce(Contract.signed_at, Contract.start_date)
     if date_from is not None:
         query = query.where(effective >= date_from)
     if date_to is not None:
         query = query.where(effective <= date_to)
-    rows = db.scalars(query.order_by(Contract.id.desc())).all()
-    return [_to_out(item) for item in rows]
+    return query
+
+
+def _payment_text_filter(text: str | None) -> ColumnElement[bool] | None:
+    if not text or not text.strip():
+        return None
+    needle = f"%{text.strip().lower()}%"
+    return or_(
+        func.lower(Contract.title).like(needle),
+        func.lower(func.coalesce(Contract.contract_no, "")).like(needle),
+        func.lower(Contract.party_a).like(needle),
+        func.lower(Contract.party_b).like(needle),
+        func.lower(Contract.counterparty).like(needle),
+    )
+
+
+def _collection_row(item: Collection) -> CollectionRow:
+    contract = item.contract
+    return CollectionRow(
+        id=item.id,
+        amount=item.amount,
+        received_at=item.received_at,
+        notes=item.notes,
+        schedule_id=item.schedule_id,
+        contract_id=item.contract_id,
+        contract_title=contract.title if contract else "",
+        contract_no=contract.contract_no if contract else None,
+        party_a=contract.party_a if contract else "",
+        party_b=contract.party_b if contract else "",
+        schedule_name=item.schedule.name if item.schedule else None,
+    )
+
+
+@router.get("", response_model=PageOut[ContractOut])
+def list_contracts(
+    q: str | None = None,
+    party: str | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    page: int = 1,
+    page_size: int = 10,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> PageOut[ContractOut]:
+    page, page_size, offset = clamp_page(page, page_size)
+    filtered = _filtered_contracts(q, party, date_from, date_to)
+    total = db.scalar(select(func.count()).select_from(filtered.subquery())) or 0
+    rows = db.scalars(
+        filtered.options(
+            selectinload(Contract.invoices),
+            selectinload(Contract.collections),
+            selectinload(Contract.files),
+        )
+        .order_by(Contract.id.desc())
+        .offset(offset)
+        .limit(page_size)
+    ).all()
+    return PageOut(
+        items=[_to_out(item) for item in rows],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
 
 
 @router.get("/summary", response_model=ContractSummary)
@@ -137,56 +204,57 @@ def contract_summary(
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
 ) -> ContractSummary:
-    rows = db.scalars(
-        select(Contract).options(
-            selectinload(Contract.invoices),
-            selectinload(Contract.collections),
-            selectinload(Contract.files),
+    count = db.scalar(select(func.count()).select_from(Contract)) or 0
+    active_count = db.scalar(select(func.count()).select_from(Contract).where(Contract.status == "active")) or 0
+    total = db.scalar(select(func.coalesce(func.sum(Contract.amount), 0))) or Decimal("0")
+    collected = db.scalar(select(func.coalesce(func.sum(Collection.amount), 0))) or Decimal("0")
+    parsing_count = db.scalar(
+        select(func.count(func.distinct(ContractFile.contract_id))).where(
+            ContractFile.contract_id.is_not(None),
+            ContractFile.parse_status.in_(("pending", "processing")),
         )
-    ).all()
-    total = sum((item.amount or Decimal("0") for item in rows), Decimal("0"))
-    collected = sum(
-        (sum((c.amount or Decimal("0") for c in item.collections), Decimal("0")) for item in rows),
-        Decimal("0"),
-    )
+    ) or 0
     return ContractSummary(
-        count=len(rows),
-        active_count=len([item for item in rows if item.status == "active"]),
+        count=count,
+        active_count=active_count,
         total_amount=total,
         collected_amount=collected,
         outstanding_amount=max(Decimal("0"), total - collected),
+        parsing_count=parsing_count,
     )
 
 
-@router.get("/payments", response_model=list[CollectionRow])
+@router.get("/payments", response_model=CollectionPageOut)
 def list_all_payments(
+    q: str | None = None,
+    page: int = 1,
+    page_size: int = 10,
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
-) -> list[CollectionRow]:
+) -> CollectionPageOut:
+    page, page_size, offset = clamp_page(page, page_size)
+    filtered = select(Collection)
+    cond = _payment_text_filter(q)
+    if cond is not None:
+        filtered = filtered.join(Contract, Collection.contract_id == Contract.id).where(cond)
+    total = db.scalar(select(func.count()).select_from(filtered.subquery())) or 0
+    amount_stmt = select(func.coalesce(func.sum(Collection.amount), 0))
+    if cond is not None:
+        amount_stmt = amount_stmt.join(Contract, Collection.contract_id == Contract.id).where(cond)
+    total_amount = db.scalar(amount_stmt) or Decimal("0")
     rows = db.scalars(
-        select(Collection)
-        .options(selectinload(Collection.contract), selectinload(Collection.schedule))
+        filtered.options(selectinload(Collection.contract), selectinload(Collection.schedule))
         .order_by(Collection.received_at.desc(), Collection.id.desc())
+        .offset(offset)
+        .limit(page_size)
     ).all()
-    result: list[CollectionRow] = []
-    for item in rows:
-        contract = item.contract
-        result.append(
-            CollectionRow(
-                id=item.id,
-                amount=item.amount,
-                received_at=item.received_at,
-                notes=item.notes,
-                schedule_id=item.schedule_id,
-                contract_id=item.contract_id,
-                contract_title=contract.title if contract else "",
-                contract_no=contract.contract_no if contract else None,
-                party_a=contract.party_a if contract else "",
-                party_b=contract.party_b if contract else "",
-                schedule_name=item.schedule.name if item.schedule else None,
-            )
-        )
-    return result
+    return CollectionPageOut(
+        items=[_collection_row(item) for item in rows],
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_amount=total_amount,
+    )
 
 
 @router.post("", response_model=ContractOut, status_code=201)

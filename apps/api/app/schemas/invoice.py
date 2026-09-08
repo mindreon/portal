@@ -29,3 +29,8 @@ class InvoiceOut(InvoiceIn):
     updated_at: datetime | None = None
 
     model_config = {"from_attributes": True}
+
+
+class InvoiceSummary(BaseModel):
+    count: int
+    issued_count: int
