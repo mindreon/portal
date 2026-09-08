@@ -88,11 +88,13 @@ export function InvoicesPanel({
   invoices,
   onChanged,
   onError,
+  onNotice,
 }: {
   contractId: number;
   invoices: Invoice[];
   onChanged: () => Promise<void>;
   onError: (message: string) => void;
+  onNotice?: (message: string) => void;
 }) {
   const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -104,7 +106,7 @@ export function InvoicesPanel({
     setBusy(true);
     try {
       const result = await uploadInvoicePdfs(files, contractId);
-      if (result.warning_text) onError(result.warning_text);
+      onNotice?.(result.warning_text || "");
       await onChanged();
     } catch (err) {
       onError(err instanceof Error ? err.message : "上传失败");
@@ -119,6 +121,7 @@ export function InvoicesPanel({
     try {
       await api(`/api/v1/invoices/${item.id}`, { method: "DELETE" });
       if (preview?.id === item.id) setPreview(null);
+      onNotice?.("");
       await onChanged();
     } catch (err) {
       onError(err instanceof Error ? err.message : "删除失败");

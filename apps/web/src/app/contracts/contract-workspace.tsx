@@ -39,6 +39,7 @@ export function ContractWorkspace({
   const [schedules, setSchedules] = useState<PaymentSchedule[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function reload() {
@@ -116,11 +117,14 @@ export function ContractWorkspace({
             <UploadInvoiceButton
               contractId={contractId}
               onUploaded={async (result) => {
-                if (result.warning_text) setError(result.warning_text);
-                else setError("");
+                setError("");
+                setNotice(result.warning_text || "");
                 await reload();
               }}
-              onError={setError}
+              onError={(message) => {
+                setNotice("");
+                setError(message);
+              }}
             />
           ) : (
             <Link href={`/invoices/new?contract=${contractId}`} className="ui-btn ui-btn-primary">
@@ -134,6 +138,7 @@ export function ContractWorkspace({
           <FormError message={error} />
         </div>
       ) : null}
+      {notice ? <p className="mb-6 text-body text-mid-gray">{notice}</p> : null}
       {contract.parse_status === "pending" || contract.parse_status === "processing" ? (
         <p className="mb-6 flex flex-wrap items-center gap-3 text-body text-mid-gray">
           <StatusBadge kind="parse" value={contract.parse_status} />
@@ -302,7 +307,19 @@ export function ContractWorkspace({
       ) : null}
 
       {tab === "invoices" ? (
-        <InvoicesPanel contractId={contractId} invoices={invoices} onChanged={reload} onError={setError} />
+        <InvoicesPanel
+          contractId={contractId}
+          invoices={invoices}
+          onChanged={reload}
+          onError={(message) => {
+            setNotice("");
+            setError(message);
+          }}
+          onNotice={(message) => {
+            setError("");
+            setNotice(message);
+          }}
+        />
       ) : null}
 
       {tab === "payments" ? (

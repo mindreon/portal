@@ -83,6 +83,9 @@ export function PdfZoomStage({
   }, []);
 
   const frameStyle = { zoom } as CSSProperties;
+  const frameSrc = src
+    ? `${src}${src.includes("#") ? "&" : "#"}toolbar=0&navpanes=0&scrollbar=1`
+    : "";
 
   return (
     <div className="preview-stage-wrap">
@@ -110,7 +113,7 @@ export function PdfZoomStage({
         ref={stageRef}
         className={compact ? "preview-stage preview-stage-compact" : "preview-stage"}
       >
-        <iframe title={title} src={src} className="preview-frame" style={frameStyle} />
+        <iframe title={title} src={frameSrc} className="preview-frame" style={frameStyle} />
       </div>
       <p className="preview-hint">可以用缩小 / 放大，或 Ctrl + 滚轮。按 0 回到 100%，按 Esc 关闭预览。</p>
     </div>
