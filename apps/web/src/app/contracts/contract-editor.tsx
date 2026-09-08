@@ -100,7 +100,7 @@ export function ContractEditor({
 
   return (
     <AppShell>
-      <PageHeader eyebrow="Contracts" title={contractId ? "编辑合同" : "新建合同"} />
+      <PageHeader title={contractId ? "编辑合同" : "新建合同"} />
       <form onSubmit={onSubmit} className="ui-card max-w-2xl space-y-5 p-6">
         <FormError message={error} />
         <Field label="合同名称">

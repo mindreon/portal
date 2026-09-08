@@ -21,7 +21,6 @@ export default function ContractPaymentsPage() {
   return (
     <AppShell>
       <PageHeader
-        eyebrow="Contracts"
         title="回款"
         description="合同房间里的到账流水。点合同名称可以回到那份合同继续登记。"
       />

@@ -109,7 +109,6 @@ export function ContractWorkspace({
   return (
     <AppShell>
       <PageHeader
-        eyebrow="Contracts"
         title={contract.title}
         description={`${contract.source_filename ? `文件 ${contract.source_filename} · ` : ""}编号 ${contract.contract_no || "未编号（内部 ID " + contract.id + "）"} · 合同额 ${money(contract.amount)} · 已开票 ${money(contract.billed_amount)} · 已回款 ${money(contract.collected_amount)}`}
         action={

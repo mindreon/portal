@@ -1,19 +1,74 @@
+# Theme tokens
+
+## Part 1 — Compact token summary
+
+**Approach:** Tailwind CSS v4 `@theme` in `apps/web/src/app/globals.css`. Geist via `next/font/google`. No `tailwind.config.*`.
+
+### Colors
+
+| Token | Value | Role |
+| --- | --- | --- |
+| `--color-canvas` / `bg-canvas` | `#f5f5f5` | Page background, muted fills, secondary buttons, search trigger |
+| `--color-paper` / `bg-paper` | `#ffffff` | Cards, popovers, sidebar active item |
+| `--color-surface-alt` / `bg-surface-alt` | `#fafafa` | Sidebar, table header |
+| `--color-ink` / `text-ink` | `#0a0a0a` | Primary text, headings, primary button fill |
+| `--color-ink-soft` / `text-ink-soft` | `#171717` | Softer filled chips / solid badges |
+| `--color-mid-gray` / `text-mid-gray` | `#737373` | Muted body, placeholders, eyebrows |
+| `--color-hairline` / `border-hairline` | `#e5e5e5` | Card borders, table rules |
+| `--color-ember` / `text-ember` | `#e7000b` | Destructive / error only |
+
+No dark theme. Selection invert: ink background + paper text.
+
+### Typography
+
+- Family: Geist (`--font-geist-ui`) + PingFang SC / Noto Sans SC
+- Weights: 400, 500, 600
+- Body: 14px / 1.43
+- caption / `.eyebrow`: 12px / 500 / 0.6px tracking / uppercase / mid-gray
+- heading-sm: 24px / 600 / -0.6px
+- heading: 30px / 600 / -0.75px
+- heading-lg: 36px / 600 / -0.9px
+- display: 48px / 600 / -2.4px
+- stat-value: `clamp(24px, 2vw, 30px)` / 600
+
+### Spacing
+
+4 / 8 / 12 / 16 / 20 / 24 / 32 / 48 px. Page padding 24–40px. Card padding 24px. Sidebar 264px. Content max 1280px.
+
+### Radius
+
+- cards: 24px (`--radius-cards`, `.ui-card`)
+- buttons / inputs / badges / nav items: 18px
+- nested (table hover rows, search hits): 10px
+- small: 6px
+- logo mark: 8px
+
+### Shadows
+
+`--shadow-subtle`: `0 0 0 1px rgba(23,23,23,0.05), 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)`
+
+### Breakpoints (Tailwind defaults)
+
+- `sm` 640px — two-col module cards
+- `lg` 1024px — desktop sidebar vs mobile chips
+
+---
+
+## Part 2 — Raw source dumps
+
+### `apps/web/src/app/globals.css`
+
+```css
 @import "tailwindcss";
 
 @theme {
-  --color-canvas: #f1f4f8;
+  --color-canvas: #f5f5f5;
   --color-paper: #ffffff;
-  --color-surface-alt: #f8fafc;
-  --color-ink: #0f172a;
-  --color-ink-soft: #1e293b;
-  --color-mid-gray: #64748b;
-  --color-hairline: #e2e8f0;
-  --color-sidebar-line: #e8ecf1;
-  --color-brand: #2563eb;
-  --color-brand-soft: #eff4ff;
-  --color-teal: #0f766e;
-  --color-teal-soft: #ccfbf1;
-  --color-blue-soft: #dbeafe;
+  --color-surface-alt: #fafafa;
+  --color-ink: #0a0a0a;
+  --color-ink-soft: #171717;
+  --color-mid-gray: #737373;
+  --color-hairline: #e5e5e5;
   --color-ember: #e7000b;
 
   --font-geist: var(--font-geist-ui), "PingFang SC", "Noto Sans SC", ui-sans-serif, system-ui, sans-serif;
@@ -47,19 +102,13 @@
 }
 
 :root {
-  --color-canvas: #f1f4f8;
+  --color-canvas: #f5f5f5;
   --color-paper: #ffffff;
-  --color-surface-alt: #f8fafc;
-  --color-ink: #0f172a;
-  --color-ink-soft: #1e293b;
-  --color-mid-gray: #64748b;
-  --color-hairline: #e2e8f0;
-  --color-sidebar-line: #e8ecf1;
-  --color-brand: #2563eb;
-  --color-brand-soft: #eff4ff;
-  --color-teal: #0f766e;
-  --color-teal-soft: #ccfbf1;
-  --color-blue-soft: #dbeafe;
+  --color-surface-alt: #fafafa;
+  --color-ink: #0a0a0a;
+  --color-ink-soft: #171717;
+  --color-mid-gray: #737373;
+  --color-hairline: #e5e5e5;
   --color-ember: #e7000b;
   --radius-cards: 24px;
   --radius-buttons: 18px;
@@ -297,7 +346,6 @@ textarea.ui-input {
   line-height: 1.43;
 }
 
-/* 冻列：左右钉住，中间横滑。border-collapse:collapse 时 sticky 会失效，所以这里改 separate。 */
 .ui-pinned-table {
   overflow-x: auto;
 }
@@ -366,3 +414,10 @@ textarea.ui-input {
 .search-hit:focus-visible {
   background: var(--color-canvas);
 }
+```
+
+### `apps/web/src/app/layout.tsx` (font wiring)
+
+Geist from `next/font/google`, subsets latin, weights 400/500/600, CSS variable `--font-geist-ui`. Body: `${geist.variable} ${geist.className} antialiased`. html `lang="zh-CN"`.
+
+No `tailwind.config.ts`. PostCSS: `@tailwindcss/postcss`.
