@@ -34,7 +34,7 @@ export default function InvoicesPage() {
           <tr>
             <th>发票</th>
             <th>对方</th>
-            <th>金额</th>
+            <th className="ui-money">金额</th>
             <th>状态</th>
           </tr>
         </thead>
@@ -55,7 +55,7 @@ export default function InvoicesPage() {
                   <p className="mt-1 text-[12px] text-mid-gray">{row.invoice_no}</p>
                 </td>
                 <td>{row.counterparty}</td>
-                <td>{money(row.amount, row.currency)}</td>
+                <td className="ui-money">{money(row.amount, row.currency)}</td>
                 <td>
                   <StatusBadge kind="invoice" value={row.status} />
                 </td>

@@ -45,3 +45,19 @@ export function TextLink({ href, children }: { href: string; children: React.Rea
     </Link>
   );
 }
+
+/** 甲方、乙方各占一行。前面标甲/乙，扫一眼就能对上。 */
+export function PartyStack({ a, b }: { a?: string | null; b?: string | null }) {
+  return (
+    <div className="ui-party-stack">
+      <p>
+        <span className="text-mid-gray">甲 </span>
+        {a?.trim() || "—"}
+      </p>
+      <p>
+        <span className="text-mid-gray">乙 </span>
+        {b?.trim() || "—"}
+      </p>
+    </div>
+  );
+}

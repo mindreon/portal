@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { PinnedTable } from "@/components/pinned-table";
-import { EmptyHint, PageHeader } from "@/components/ui";
+import { EmptyHint, PageHeader, PartyStack } from "@/components/ui";
 import { api, money } from "@/lib/api";
 import type { CollectionRow } from "@/lib/types";
 
@@ -41,9 +41,9 @@ export default function ContractPaymentsPage() {
           <tr>
             <th>到账日</th>
             <th>合同</th>
-            <th>甲 / 乙</th>
+            <th>甲乙</th>
             <th>期次</th>
-            <th>金额</th>
+            <th className="ui-money">金额</th>
           </tr>
         </thead>
         <tbody>
@@ -64,10 +64,10 @@ export default function ContractPaymentsPage() {
                   <p className="mt-1 text-[12px] text-mid-gray">{row.contract_no || `未编号 · ID ${row.contract_id}`}</p>
                 </td>
                 <td>
-                  {row.party_a || "—"} / {row.party_b || "—"}
+                  <PartyStack a={row.party_a} b={row.party_b} />
                 </td>
                 <td>{row.schedule_name || "—"}</td>
-                <td>{money(row.amount)}</td>
+                <td className="ui-money">{money(row.amount)}</td>
               </tr>
             ))
           )}

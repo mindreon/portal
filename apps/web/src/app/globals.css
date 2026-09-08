@@ -146,6 +146,7 @@ a {
   line-height: 1.2;
   letter-spacing: -0.75px;
   color: var(--color-ink);
+  white-space: nowrap;
 }
 
 .ui-card {
@@ -352,6 +353,27 @@ textarea.ui-input {
 .ui-table td {
   padding: 14px 24px;
   vertical-align: top;
+}
+
+/* 金额列：表格会按比例挤列宽，min-width 经常被忽略。nowrap + width:1% 让这一列跟着数字变宽，不把 ¥ 拆行。 */
+.ui-table th.ui-money,
+.ui-table td.ui-money {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  width: 1%;
+}
+
+/* 甲乙各占一行，避免「公司 A / 公司 B」糊成一长串。 */
+.ui-party-stack {
+  min-width: 12rem;
+}
+
+.ui-party-stack p {
+  margin: 0;
+}
+
+.ui-party-stack p + p {
+  margin-top: 6px;
 }
 
 .ui-table th {
