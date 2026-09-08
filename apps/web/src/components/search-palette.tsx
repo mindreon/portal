@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { Icon } from "@/components/icons";
 import { api } from "@/lib/api";
 import { useCurrentUser } from "@/lib/current-user";
 import { searchShortcuts } from "@/lib/modules";
@@ -91,7 +92,10 @@ export function SearchPalette() {
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} className="search-trigger">
-        <span>搜索模块或记录…</span>
+        <span className="inline-flex min-w-0 items-center gap-2">
+          <Icon name="search" size={16} className="shrink-0 text-mid-gray" />
+          <span>搜索模块或记录…</span>
+        </span>
         <kbd>⌘K</kbd>
       </button>
 

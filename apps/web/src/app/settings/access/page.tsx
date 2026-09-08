@@ -62,7 +62,6 @@ export default function AccessPage() {
   return (
     <AppShell>
       <PageHeader
-        eyebrow="Access"
         title="人员权限"
         description="勾选之后立刻生效。同事用飞书登录一次后才会出现在这张表里。至少保留一名管理员，否则没人能再打开这一页。"
       />

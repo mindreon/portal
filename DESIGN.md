@@ -1,7 +1,7 @@
 # Portal — Design System
 
-> 风格来源：**Ui — Style Reference**  
-> clinical blueprint on frosted paper
+> 风格来源：浅石板蓝工作台 + 品牌蓝图标  
+> 不再用纯黑白线框。
 
 **Theme:** light  
 **产品：** Portal 内部业务系统（合同、发票为两个独立模块）  
@@ -11,12 +11,13 @@
 
 ## 1. 品牌语气
 
-shadcn/ui 式的单色工作台：纯白卡片、偏暖的浅灰画布、大圆角卡片靠发丝描边浮起来。界面几乎全是无彩色——黑字、白面、灰辅助——**唯一的红色 `#e7000b` 只留给删除和错误**。字体用 Geist 的几何中性，大标题字距收得很紧，读起来像开发者基础设施，不是消费级产品。
+内部产品工作台：浅石板蓝画布、白卡片、白侧栏带发丝右边线。中文标题单独出现，**不要再叠一层英文大写 label**（Workbench / Contracts / Invoices）。侧栏和模块卡片用 Lucide 线框图标做锚点。主按钮仍是深色填充；品牌蓝 `#2563EB` 只用于选中态、链接和图标。**红色 `#e7000b` 只留给删除和错误。**
 
 **对 Portal 的白话版：**
 
 - 没有黄按钮、没有花园色块、没有衬线标题。
-- 主操作是黑底白字；取消/次要是浅灰底；删除是红字。
+- 主操作是深底白字；取消/次要是浅灰底；删除是红字。
+- 合同图标偏蓝，发票图标偏青绿，方便扫一眼区分房间。
 - 合同和发票共用这套皮肤，但仍是两个独立模块。
 
 ---
@@ -25,14 +26,20 @@ shadcn/ui 式的单色工作台：纯白卡片、偏暖的浅灰画布、大圆�
 
 | Name | Value | Token | Role |
 |------|-------|-------|------|
-| Canvas | `#f5f5f5` | `--color-canvas` | Page background, muted surface fills, secondary buttons |
-| Paper | `#ffffff` | `--color-paper` | Card surfaces, popover backgrounds, primary button fills (text on dark) |
-| Surface Alt | `#fafafa` | `--color-surface-alt` | Sidebar background, subtle card variant, input resting state companion |
-| Ink | `#0a0a0a` | `--color-ink` | Primary text, headings, button labels, icon strokes |
-| Ink Soft | `#171717` | `--color-ink-soft` | Filled button backgrounds, secondary text on light surfaces |
-| Mid Gray | `#737373` | `--color-mid-gray` | Muted body text, placeholder text, helper labels |
-| Hairline | `#e5e5e5` | `--color-hairline` | Borders, input outlines, card edges, badge outlines |
-| Ember | `#e7000b` | `--color-ember` | Destructive / error only — never decoration or status “success” |
+| Canvas | `#F1F4F8` | `--color-canvas` | Page background, muted fills, secondary buttons |
+| Paper | `#ffffff` | `--color-paper` | Cards, sidebar, popovers |
+| Surface Alt | `#F8FAFC` | `--color-surface-alt` | Table header |
+| Sidebar line | `#E8ECF1` | `--color-sidebar-line` | Sidebar right border |
+| Ink | `#0F172A` | `--color-ink` | Primary text, headings, filled buttons |
+| Ink Soft | `#1E293B` | `--color-ink-soft` | Solid badges |
+| Mid Gray | `#64748B` | `--color-mid-gray` | Muted body, placeholders |
+| Hairline | `#E2E8F0` | `--color-hairline` | Card and table borders |
+| Brand | `#2563EB` | `--color-brand` | Active nav, workbench / contract icons |
+| Brand soft | `#EFF4FF` | `--color-brand-soft` | Active nav well |
+| Teal | `#0F766E` | `--color-teal` | Invoice icons |
+| Teal soft | `#CCFBF1` | `--color-teal-soft` | Invoice icon well |
+| Blue soft | `#DBEAFE` | `--color-blue-soft` | Contract icon well |
+| Ember | `#e7000b` | `--color-ember` | Destructive / error only |
 
 ---
 
@@ -85,7 +92,7 @@ All interface text. Body 14px/400, headings 24–48px/600, buttons 13–14px/500
 
 **Card elevation:** `0 0 0 1px rgba(23,23,23,0.05), 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)`  
 **Filled button:** no shadow  
-**Input focus:** 1px `#e5e5e5` ring, no offset
+**Input focus:** 1px `#E2E8F0` ring, no offset
 
 **Layout:** max-width 1280px · sidebar 264px · page padding 40px · card padding 24px · control gap 12px · section gap 32px  
 **Controls:** button/input height 40px · input padding 10px 14px · table cell 14px 24px  
@@ -97,18 +104,19 @@ All interface text. Body 14px/400, headings 24–48px/600, buttons 13–14px/500
 
 | 规范 | Portal 用法 |
 |------|-------------|
-| Primary filled `#0a0a0a` / `#fafafa` | 登录、新建、保存 |
-| Secondary ghost `#f5f5f5` | 返回、次要动作（飞书已开时的开发登录） |
+| Primary filled `#0F172A` / `#fafafa` | 登录、新建、保存 |
+| Secondary ghost `#F1F4F8` | 返回、次要动作（飞书已开时的开发登录） |
 | Outline | 卡片内的第三级动作 |
 | Card 白底 + hairline + 轻阴影 | 工作台统计、列表、表单 |
 | Input 灰底无边，focus 发丝描边 | 全部表单 |
 | Badge solid / soft | 状态：履约中/已开具用 solid；草稿用 soft |
-| Sidebar `#fafafa` | 左侧导航，不要再画分割线 |
-| Breadcrumb | 顶栏层级路径：分隔符 `#737373`，当前段 `#0a0a0a` |
-| Search trigger | 顶栏灰底胶囊，右侧 `⌘K`，打开命令面板 |
+| Sidebar `#ffffff` + `#E8ECF1` 右边线 | 左侧导航，选中项用品牌蓝浅底 |
+| 图标 | 工作台 layout-dashboard、合同 file-text、发票 receipt、权限 shield |
+| Breadcrumb | 顶栏层级路径：分隔符 `#64748B`，当前段 `#0F172A` |
+| Search trigger | 顶栏灰底胶囊，左侧搜索图标，右侧 `⌘K` |
 | Destructive `#e7000b` | 仅「删除」 |
 
-合同 `/contracts`、发票 `/invoices` 保持独立。两边主按钮都是黑底，不再用双彩色编码。
+合同 `/contracts`、发票 `/invoices` 保持独立。两边主按钮都是深色，不用整页双色编码。页面标题只写中文，不要再加英文 eyebrow。
 
 ---
 
@@ -141,20 +149,23 @@ URL 约定：`/[模块]/[子功能]/[id]`，例如 `/contracts/new`、`/invoices
 
 ### Do
 
-- Use `#0a0a0a` on `#ffffff` context for filled buttons — dark inversion is the only primary treatment
+- Use `#0F172A` on `#ffffff` context for filled buttons — dark inversion is the only primary treatment
+- Use `#2563EB` for active nav and icons, not for primary buttons
 - 18px radius on buttons, inputs, badges; 24px only on cards
 - Display headlines 48px/600 with -0.05em tracking on the login title; inner pages use 30px heading
 - Reserve `#e7000b` exclusively for destructive / error
 - Keep the 1px hairline on cards
-- Surface stack: canvas `#f5f5f5` → sidebar `#fafafa` → paper `#ffffff`
+- Surface stack: canvas `#F1F4F8` → sidebar/paper `#ffffff` → table header `#F8FAFC`
+- Chinese titles stand alone; logo lockup may keep Internal / Portal
 
 ### Don't
 
-- No yellow, green, fuchsia, navy-violet, or serif headlines
+- No stacked English uppercase duplicates next to Chinese titles (Workbench, Contracts, Invoices)
+- No yellow, fuchsia, navy-violet, or serif headlines
 - No decorative blobs or illustrations
-- No gradients or colored shadows
+- No full-page gradients or colored shadows
 - No body text below 14px
-- No two identical filled black buttons in one row without a ghost sibling
+- No two identical filled dark buttons in one row without a ghost sibling
 
 ---
 
@@ -162,13 +173,19 @@ URL 约定：`/[模块]/[子功能]/[id]`，例如 `/contracts/new`、`/invoices
 
 ```css
 :root {
-  --color-canvas: #f5f5f5;
+  --color-canvas: #F1F4F8;
   --color-paper: #ffffff;
-  --color-surface-alt: #fafafa;
-  --color-ink: #0a0a0a;
-  --color-ink-soft: #171717;
-  --color-mid-gray: #737373;
-  --color-hairline: #e5e5e5;
+  --color-surface-alt: #F8FAFC;
+  --color-ink: #0F172A;
+  --color-ink-soft: #1E293B;
+  --color-mid-gray: #64748B;
+  --color-hairline: #E2E8F0;
+  --color-sidebar-line: #E8ECF1;
+  --color-brand: #2563EB;
+  --color-brand-soft: #EFF4FF;
+  --color-teal: #0F766E;
+  --color-teal-soft: #CCFBF1;
+  --color-blue-soft: #DBEAFE;
   --color-ember: #e7000b;
   --font-geist: "Geist", ui-sans-serif, system-ui, sans-serif;
   --radius-cards: 24px;

@@ -64,7 +64,6 @@ export default function ContractsPage() {
   return (
     <AppShell>
       <PageHeader
-        eyebrow="Contracts"
         title="合同"
         action={
           <Link href="/contracts/new" className="ui-btn ui-btn-primary">

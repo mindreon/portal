@@ -20,7 +20,6 @@ export default function InvoicesPage() {
   return (
     <AppShell>
       <PageHeader
-        eyebrow="Invoices"
         title="发票"
         description="独立模块。发票可以单独开，不必先有合同。"
         action={

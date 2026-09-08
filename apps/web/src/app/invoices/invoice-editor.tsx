@@ -106,7 +106,7 @@ export function InvoiceEditor({
 
   return (
     <AppShell>
-      <PageHeader eyebrow="Invoices" title={invoiceId ? "编辑发票" : "新建发票"} />
+      <PageHeader title={invoiceId ? "编辑发票" : "新建发票"} />
       <form onSubmit={onSubmit} className="ui-card max-w-2xl space-y-5 p-6">
         <FormError message={error} />
         <Field label="发票名称">

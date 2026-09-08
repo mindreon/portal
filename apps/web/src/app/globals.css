@@ -1,13 +1,19 @@
 @import "tailwindcss";
 
 @theme {
-  --color-canvas: #f5f5f5;
+  --color-canvas: #f1f4f8;
   --color-paper: #ffffff;
-  --color-surface-alt: #fafafa;
-  --color-ink: #0a0a0a;
-  --color-ink-soft: #171717;
-  --color-mid-gray: #737373;
-  --color-hairline: #e5e5e5;
+  --color-surface-alt: #f8fafc;
+  --color-ink: #0f172a;
+  --color-ink-soft: #1e293b;
+  --color-mid-gray: #64748b;
+  --color-hairline: #e2e8f0;
+  --color-sidebar-line: #e8ecf1;
+  --color-brand: #2563eb;
+  --color-brand-soft: #eff4ff;
+  --color-teal: #0f766e;
+  --color-teal-soft: #ccfbf1;
+  --color-blue-soft: #dbeafe;
   --color-ember: #e7000b;
 
   --font-geist: var(--font-geist-ui), "PingFang SC", "Noto Sans SC", ui-sans-serif, system-ui, sans-serif;
@@ -41,13 +47,19 @@
 }
 
 :root {
-  --color-canvas: #f5f5f5;
+  --color-canvas: #f1f4f8;
   --color-paper: #ffffff;
-  --color-surface-alt: #fafafa;
-  --color-ink: #0a0a0a;
-  --color-ink-soft: #171717;
-  --color-mid-gray: #737373;
-  --color-hairline: #e5e5e5;
+  --color-surface-alt: #f8fafc;
+  --color-ink: #0f172a;
+  --color-ink-soft: #1e293b;
+  --color-mid-gray: #64748b;
+  --color-hairline: #e2e8f0;
+  --color-sidebar-line: #e8ecf1;
+  --color-brand: #2563eb;
+  --color-brand-soft: #eff4ff;
+  --color-teal: #0f766e;
+  --color-teal-soft: #ccfbf1;
+  --color-blue-soft: #dbeafe;
   --color-ember: #e7000b;
   --radius-cards: 24px;
   --radius-buttons: 18px;

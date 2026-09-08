@@ -44,7 +44,6 @@ function NewContractForm() {
   return (
     <AppShell>
       <PageHeader
-        eyebrow="Contracts"
         title="新建合同"
         description="上传 PDF 或 zip 后会立刻出现在合同列表里，识别在后台继续，刷新页面也不会中断。"
       />

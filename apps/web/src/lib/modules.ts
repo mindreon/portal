@@ -18,7 +18,6 @@ export type BusinessModule = {
   id: string;
   name: string;
   href: string;
-  hint: string;
   summary: string;
   features: ModuleFeature[];
 };
@@ -28,7 +27,6 @@ export const MODULES: BusinessModule[] = [
     id: "contracts",
     name: "合同",
     href: "/contracts",
-    hint: "Contracts",
     summary: "立约、履约、归档。和发票分开走。",
     features: [
       { href: "/contracts", label: "全部合同" },
@@ -39,7 +37,6 @@ export const MODULES: BusinessModule[] = [
     id: "invoices",
     name: "发票",
     href: "/invoices",
-    hint: "Invoices",
     summary: "开具、收款、作废。需要时再挂合同。",
     features: [
       { href: "/invoices", label: "全部发票" },
@@ -56,7 +53,6 @@ export const SETTINGS_MODULE: BusinessModule = {
   id: "settings",
   name: "权限",
   href: "/settings/access",
-  hint: "Access",
   summary: "给每个人勾选能进的房间。",
   features: [{ href: "/settings/access", label: "人员权限" }],
 };

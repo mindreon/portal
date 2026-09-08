@@ -1,12 +1,10 @@
 import Link from "next/link";
 
 export function PageHeader({
-  eyebrow,
   title,
   description,
   action,
 }: {
-  eyebrow: string;
   title: string;
   description?: string;
   action?: React.ReactNode;
@@ -14,8 +12,7 @@ export function PageHeader({
   return (
     <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
       <div className="max-w-2xl">
-        <p className="eyebrow">{eyebrow}</p>
-        <h2 className="heading mt-2">{title}</h2>
+        <h2 className="heading">{title}</h2>
         {description ? <p className="mt-3 text-body text-mid-gray">{description}</p> : null}
       </div>
       {action}

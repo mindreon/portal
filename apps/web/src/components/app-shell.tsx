@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 import { Breadcrumbs } from "@/components/breadcrumbs";
+import { Icon, moduleIcon, type IconName } from "@/components/icons";
 import { LogoLockup } from "@/components/logo";
 import { SearchPalette } from "@/components/search-palette";
 import { api } from "@/lib/api";
@@ -14,20 +15,27 @@ function NavLink({
   href,
   label,
   hint,
+  icon,
   active,
 }: {
   href: string;
   label: string;
   hint?: string;
+  icon?: IconName;
   active: boolean;
 }) {
   return (
     <Link
       href={href}
-      className={`block rounded-[18px] px-3.5 py-2.5 ${active ? "bg-paper font-medium text-ink" : "text-ink hover:bg-paper"}`}
+      className={`flex items-center gap-3 rounded-[18px] px-3.5 py-2.5 ${
+        active ? "bg-brand-soft font-medium text-brand" : "text-ink hover:bg-canvas"
+      }`}
     >
-      <span className="block text-[14px]">{label}</span>
-      {hint ? <span className="mt-0.5 block text-[12px] tracking-[0.6px] text-mid-gray uppercase">{hint}</span> : null}
+      {icon ? <Icon name={icon} className={active ? "text-brand" : "text-mid-gray"} /> : null}
+      <span className="min-w-0">
+        <span className="block text-[14px]">{label}</span>
+        {hint ? <span className="mt-0.5 block text-[12px] text-mid-gray">{hint}</span> : null}
+      </span>
     </Link>
   );
 }
@@ -36,7 +44,7 @@ function ChipLink({ href, label, active }: { href: string; label: string; active
   return (
     <Link
       href={href}
-      className={`shrink-0 rounded-[18px] px-3.5 py-2 text-[14px] ${active ? "bg-ink font-medium text-[#fafafa]" : "bg-canvas text-ink"}`}
+      className={`shrink-0 rounded-[18px] px-3.5 py-2 text-[14px] ${active ? "bg-brand font-medium text-paper" : "bg-canvas text-ink"}`}
     >
       {label}
     </Link>
@@ -46,10 +54,10 @@ function ChipLink({ href, label, active }: { href: string; label: string; active
 function ForbiddenNotice({ name }: { name: string }) {
   return (
     <div className="ui-card max-w-xl p-8">
-      <p className="eyebrow">403</p>
-      <h2 className="heading mt-2">没有访问权限</h2>
+      <p className="text-[12px] font-medium text-mid-gray">没有权限</p>
+      <h2 className="heading mt-2">进不了「{name}」</h2>
       <p className="mt-3 text-body text-mid-gray">
-        你的账号还不能进入「{name}」。需要开通的话，请让管理员打开左下角的「权限管理」，给对应模块打勾。
+        你的账号还不能进入这个房间。需要开通的话，请让管理员打开左下角的「权限管理」，给对应模块打勾。
       </p>
       <Link href="/" className="ui-btn ui-btn-primary mt-6 inline-flex">
         返回工作台
@@ -75,7 +83,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-canvas lg:grid lg:grid-cols-[264px_minmax(0,1fr)]">
-      <aside className="hidden flex-col bg-surface-alt px-6 py-8 pb-20 lg:flex lg:min-h-screen">
+      <aside className="hidden flex-col border-r border-sidebar-line bg-paper px-6 py-8 pb-20 lg:flex lg:min-h-screen">
         <Link href="/" className="inline-block">
           <LogoLockup />
         </Link>
@@ -85,15 +93,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link href="/" className="text-body text-mid-gray hover:text-ink">
               全部模块
             </Link>
-            <p className="eyebrow mt-6">{navModule.hint}</p>
-            <p className="mt-2 text-[16px] font-semibold tracking-[-0.4px] text-ink">{navModule.name}</p>
+            <p className="mt-6 flex items-center gap-2 text-[16px] font-semibold tracking-[-0.4px] text-ink">
+              <Icon name={moduleIcon(navModule.id)} className="text-brand" />
+              {navModule.name}
+            </p>
             <nav className="mt-5 space-y-1.5">
               {navModule.features.map((feature) => (
                 <NavLink
                   key={feature.href}
                   href={feature.href}
                   label={feature.label}
-                  hint={feature.hint}
                   active={isFeatureActive(pathname, feature, navModule.features)}
                 />
               ))}
@@ -101,9 +110,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         ) : (
           <nav className="mt-10 flex-1 space-y-1.5">
-            <NavLink href="/" label="工作台" hint="全部模块" active={pathname === "/"} />
+            <NavLink
+              href="/"
+              label="工作台"
+              hint="全部模块"
+              icon="layout-dashboard"
+              active={pathname === "/"}
+            />
             {modules.map((item) => (
-              <NavLink key={item.id} href={item.href} label={item.name} hint={item.hint} active={false} />
+              <NavLink
+                key={item.id}
+                href={item.href}
+                label={item.name}
+                icon={moduleIcon(item.id)}
+                active={false}
+              />
             ))}
           </nav>
         )}
@@ -114,10 +135,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {user?.role === "admin" ? (
             <Link
               href="/settings/access"
-              className={`mt-3 -mx-3.5 block rounded-[18px] px-3.5 py-2.5 text-[14px] font-medium ${
-                pathname.startsWith("/settings") ? "bg-paper text-ink" : "text-ink hover:bg-paper"
+              className={`mt-3 -mx-3.5 flex items-center gap-2 rounded-[18px] px-3.5 py-2.5 text-[14px] font-medium ${
+                pathname.startsWith("/settings") ? "bg-brand-soft text-brand" : "text-ink hover:bg-canvas"
               }`}
             >
+              <Icon name="shield" size={18} className={pathname.startsWith("/settings") ? "text-brand" : "text-mid-gray"} />
               权限管理
             </Link>
           ) : null}
