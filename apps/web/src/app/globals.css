@@ -363,6 +363,21 @@ textarea.ui-input {
   width: 1%;
 }
 
+/* 操作列：链接必须同一行。flex-wrap 会先折行，钉列再按折行后的窄宽度计算，就会一直叠着。 */
+.ui-table th.ui-actions,
+.ui-table td.ui-actions {
+  white-space: nowrap;
+  width: 1%;
+}
+
+.ui-actions-row {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 1rem;
+  white-space: nowrap;
+}
+
 /* 甲乙各占一行，避免「公司 A / 公司 B」糊成一长串。 */
 .ui-party-stack {
   min-width: 12rem;

@@ -388,7 +388,7 @@ function RowSaveCancel({
   busy?: boolean;
 }) {
   return (
-    <span className="relative z-10 flex flex-wrap items-center gap-3">
+    <span className="ui-actions-row relative z-10">
       <button type="button" onClick={onSave} disabled={busy} className="ui-btn ui-btn-primary">
         {busy ? "提交中…" : saveLabel}
       </button>
@@ -587,13 +587,13 @@ function ScheduleTableRow({
           receivedDate || "—"
         )}
       </td>
-      <td>
+      <td className="ui-actions">
         {mode === "edit" ? (
           <RowSaveCancel onSave={savePlan} onCancel={() => setMode("view")} saveLabel="保存" busy={busy} />
         ) : mode === "collect" ? (
           <RowSaveCancel onSave={confirmReceipt} onCancel={() => setMode("view")} saveLabel="确认" busy={busy} />
         ) : (
-          <span className="relative z-10 flex flex-wrap items-center gap-3 whitespace-nowrap">
+          <span className="ui-actions-row relative z-10">
             <ActionLink onClick={startEdit}>编辑</ActionLink>
             <ActionLink danger onClick={remove}>
               删除
@@ -682,11 +682,11 @@ function LooseCollectionRow({
           item.received_at || "—"
         )}
       </td>
-      <td>
+      <td className="ui-actions">
         {editing ? (
           <RowSaveCancel onSave={save} onCancel={() => setEditing(false)} saveLabel="保存" />
         ) : (
-          <span className="flex flex-wrap items-center gap-3 whitespace-nowrap">
+          <span className="ui-actions-row">
             <ActionLink onClick={() => setEditing(true)}>编辑</ActionLink>
             <ActionLink danger onClick={remove}>
               删除
@@ -744,7 +744,7 @@ function PaymentsPanel({
             <th className="ui-money">计划金额</th>
             <th className="ui-money">已回款</th>
             <th>到账日</th>
-            <th>操作</th>
+            <th className="ui-actions">操作</th>
           </tr>
         </thead>
         <tbody>

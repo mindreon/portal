@@ -125,7 +125,7 @@ export default function ContractsPage() {
             <th className="ui-money">金额</th>
             <th className="ui-money">已回款</th>
             <th>状态</th>
-            <th>操作</th>
+            <th className="ui-actions">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -165,8 +165,8 @@ export default function ContractsPage() {
                     <StatusBadge kind="contract" value={row.status} />
                   )}
                 </td>
-                <td>
-                  <div className="flex flex-wrap gap-4">
+                <td className="ui-actions">
+                  <div className="ui-actions-row">
                     <Link href={`/contracts/${row.id}`} className="font-medium underline-offset-4 hover:underline">
                       查看
                     </Link>
