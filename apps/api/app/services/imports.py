@@ -36,7 +36,8 @@ from app.services.extract import (
 )
 from app.services.pdf_parse import parse_pdf_bytes
 
-MAX_FILE_BYTES = 50 * 1024 * 1024
+MAX_FILE_MB = 200
+MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024
 UNSAFE_NAME = re.compile(r"[^A-Za-z0-9._\-\u4e00-\u9fff]+")
 logger = logging.getLogger(__name__)
 
@@ -234,7 +235,7 @@ def stage_import(db: Session, user: User, uploads: list[tuple[str, bytes]]) -> I
         raise ValueError("请至少选择一个 PDF 或 zip")
     for name, data in uploads:
         if len(data) > MAX_FILE_BYTES:
-            raise ValueError(f"{name} 超过 50MB")
+            raise ValueError(f"{name} 超过 {MAX_FILE_MB}MB")
 
     batch = ImportBatch(status="processing", owner_id=user.id)
     db.add(batch)

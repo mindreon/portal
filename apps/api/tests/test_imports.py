@@ -284,3 +284,15 @@ def test_upload_returns_placeholders_then_list_shows_filename(logged_in: TestCli
     assert row["source_filename"] == "采购合同.pdf"
     by_name = logged_in.get("/api/v1/contracts", params={"party": "采购合同"})
     assert any(item["id"] == row["id"] for item in by_name.json())
+
+
+def test_upload_rejects_file_over_limit(logged_in: TestClient, monkeypatch) -> None:
+    from app.services.imports import MAX_FILE_MB
+
+    monkeypatch.setattr("app.services.imports.MAX_FILE_BYTES", 10)
+    response = logged_in.post(
+        "/api/v1/contracts/imports",
+        files=[("files", ("huge.pdf", b"01234567890", "application/pdf"))],
+    )
+    assert response.status_code == 400, response.text
+    assert f"超过 {MAX_FILE_MB}MB" in response.json()["detail"]
