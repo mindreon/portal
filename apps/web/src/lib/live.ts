@@ -32,13 +32,16 @@ export function useImportLive(enabled: boolean, onUpdate: () => void) {
       onUpdateRef.current();
     }
 
-    source.addEventListener("open", () => {
+    function handleOpen() {
       // 连上后再拉一次，避免「刚提交、连接还没建好」中间漏掉的那条。
       onUpdateRef.current();
-    });
+    }
+
+    source.addEventListener("open", handleOpen);
     source.addEventListener("message", handleMessage);
 
     return () => {
+      source.removeEventListener("open", handleOpen);
       source.removeEventListener("message", handleMessage);
       source.close();
     };
