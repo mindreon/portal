@@ -8,6 +8,7 @@ import { PinnedTable } from "@/components/pinned-table";
 import { StatusBadge } from "@/components/status-badge";
 import { EmptyHint, PageHeader } from "@/components/ui";
 import { api, money } from "@/lib/api";
+import { useImportLive } from "@/lib/live";
 import type { Contract, ContractSummary } from "@/lib/types";
 
 function isParsing(status: string) {
@@ -47,14 +48,9 @@ export default function ContractsPage() {
   }, []);
 
   const parsing = rows.some((row) => isParsing(row.parse_status));
-
-  useEffect(() => {
-    if (!parsing) return;
-    const timer = window.setInterval(() => {
-      load().catch(() => undefined);
-    }, 1500);
-    return () => window.clearInterval(timer);
-  }, [parsing, party, dateFrom, dateTo]);
+  useImportLive(parsing, () => {
+    load().catch(() => undefined);
+  });
 
   function onFilter(event: React.FormEvent) {
     event.preventDefault();
@@ -79,8 +75,8 @@ export default function ContractsPage() {
         <StatBlock label="待回款" value={money(summary?.outstanding_amount ?? 0)} />
       </section>
 
-      {parsing ? (
-        <p className="mb-6 text-body text-mid-gray">有合同正在后台识别，列表会自动刷新。离开或刷新页面不会中断。</p>
+          {parsing ? (
+        <p className="mb-6 text-body text-mid-gray">有合同正在后台识别，完成后会自动更新。离开或刷新页面不会中断。</p>
       ) : null}
 
       <form onSubmit={onFilter} className="ui-card mb-6 flex flex-wrap items-end gap-4 p-6">

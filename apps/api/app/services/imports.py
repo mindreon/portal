@@ -24,6 +24,7 @@ from app.models.document import ContractFile, ImportBatch
 from app.models.invoice import Invoice
 from app.models.payment import Collection, PaymentSchedule
 from app.models.user import User
+from app.services.events import notify_import
 from app.services.extract import (
     ExtractedFields,
     build_schedules,
@@ -286,7 +287,7 @@ def stage_import(db: Session, user: User, uploads: list[tuple[str, bytes]]) -> I
 
 
 def process_import_batch(batch_id: int) -> None:
-    """后台入口：自己开数据库会话，按文件提交，列表轮询才能看到进度。"""
+    """后台入口：自己开数据库会话，按文件提交，每提交一次就推一条 SSE。"""
     db = SessionLocal()
     try:
         _process_import_batch(db, batch_id)
@@ -297,6 +298,7 @@ def process_import_batch(batch_id: int) -> None:
             _append_warning(batch, "后台识别失败，请打开合同手工核对。")
             batch.status = "failed"
             db.commit()
+            notify_import(batch.owner_id, batch_id=batch.id)
         raise
     finally:
         db.close()
@@ -325,7 +327,7 @@ def _process_import_batch(db: Session, batch_id: int) -> None:
     )
     parsed_rows: list[tuple[ContractFile, ExtractedFields]] = []
     for row in pending:
-        parsed = _parse_stored_file(db, row)
+        parsed = _parse_stored_file(db, batch, row)
         if parsed is None:
             continue
         parsed_rows.append((row, parsed))
@@ -336,11 +338,13 @@ def _process_import_batch(db: Session, batch_id: int) -> None:
     if batch.status == "processing":
         batch.status = "review"
     db.commit()
+    notify_import(batch.owner_id, batch_id=batch.id)
 
 
-def _parse_stored_file(db: Session, row: ContractFile) -> ExtractedFields | None:
+def _parse_stored_file(db: Session, batch: ImportBatch, row: ContractFile) -> ExtractedFields | None:
     row.parse_status = "processing"
     db.commit()
+    notify_import(batch.owner_id, batch_id=batch.id, contract_id=row.contract_id)
     try:
         data = Path(row.stored_path).read_bytes()
         parsed = parse_pdf_bytes(data)
@@ -348,6 +352,7 @@ def _parse_stored_file(db: Session, row: ContractFile) -> ExtractedFields | None
         row.parse_status = "failed"
         row.error_message = f"识别失败：{exc}"
         db.commit()
+        notify_import(batch.owner_id, batch_id=batch.id, contract_id=row.contract_id)
         return None
     row.source = parsed.source
     row.extracted_text = parsed.text or None
@@ -356,6 +361,7 @@ def _parse_stored_file(db: Session, row: ContractFile) -> ExtractedFields | None
     fields = parsed.fields
     row.doc_type = "invoice" if fields.doc_type == "invoice" else "contract"
     db.commit()
+    notify_import(batch.owner_id, batch_id=batch.id, contract_id=row.contract_id)
     return fields
 
 
@@ -411,6 +417,7 @@ def _apply_parsed_rows(
         for extracted in fields.invoices:
             _add_invoice_draft(db, user, contract, extracted.invoice_code, extracted.invoice_no, extracted.amount)
         db.commit()
+        notify_import(batch.owner_id, batch_id=batch.id, contract_id=contract.id)
 
     contract_list = list(contract_piles.values())
     for row, fields in invoice_only:
@@ -429,6 +436,7 @@ def _apply_parsed_rows(
                 db, user, target, extracted.invoice_code, extracted.invoice_no, extracted.amount, user_id=user.id
             )
         db.commit()
+        notify_import(batch.owner_id, batch_id=batch.id, contract_id=target.id if target else None)
 
     for key, contract in contract_piles.items():
         already = db.scalars(select(PaymentSchedule).where(PaymentSchedule.contract_id == contract.id)).first()

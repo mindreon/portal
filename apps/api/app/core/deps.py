@@ -10,10 +10,7 @@ from app.models.user import User
 COOKIE_NAME = get_settings().cookie_name
 
 
-def get_current_user(
-    db: Session = Depends(get_db),
-    session_token: str | None = Cookie(default=None, alias=COOKIE_NAME),
-) -> User:
+def load_user_from_token(db: Session, session_token: str | None) -> User:
     """从登录 Cookie 里解析出当前用户。没登录就返回 401。"""
     if not session_token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未登录")
@@ -26,3 +23,10 @@ def get_current_user(
     if user is None or not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="账号不可用")
     return user
+
+
+def get_current_user(
+    db: Session = Depends(get_db),
+    session_token: str | None = Cookie(default=None, alias=COOKIE_NAME),
+) -> User:
+    return load_user_from_token(db, session_token)
