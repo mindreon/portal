@@ -25,10 +25,17 @@ class InvoiceIn(BaseModel):
 class InvoiceOut(InvoiceIn):
     id: int
     owner_id: int
+    original_name: str | None = None
+    has_file: bool = False
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
     model_config = {"from_attributes": True}
+
+
+class InvoiceUploadOut(BaseModel):
+    items: list[InvoiceOut]
+    warning_text: str | None = None
 
 
 class InvoiceSummary(BaseModel):

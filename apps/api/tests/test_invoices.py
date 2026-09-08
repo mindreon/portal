@@ -1,4 +1,15 @@
+from pathlib import Path
+
 from fastapi.testclient import TestClient
+
+MINIMAL_PDF = b"%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n"
+OTHER_PDF = b"%PDF-1.4\n1 0 obj<</Type/Catalog/Other true>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n"
+
+
+def _upload(client: TestClient, files: list[tuple[str, bytes]], contract_id: int | None = None):
+    payload = [("files", (name, data, "application/pdf")) for name, data in files]
+    data = {"contract_id": str(contract_id)} if contract_id is not None else None
+    return client.post("/api/v1/invoices/upload", files=payload, data=data)
 
 
 def test_invoice_with_contract(logged_in: TestClient) -> None:
@@ -81,3 +92,78 @@ def test_invoice_list_paginates_and_filters(logged_in: TestClient) -> None:
     assert summary.status_code == 200
     assert summary.json()["count"] == 12
     assert summary.json()["issued_count"] == 3
+
+
+def test_upload_multiple_invoice_pdfs_and_preview(logged_in: TestClient) -> None:
+    contract = logged_in.post(
+        "/api/v1/contracts",
+        json={"title": "软件采购协议", "contract_no": "HT-INV-PDF", "counterparty": "客户", "amount": "200000"},
+    )
+    contract_id = contract.json()["id"]
+
+    uploaded = _upload(
+        logged_in,
+        [("第一张发票.pdf", MINIMAL_PDF), ("第二张发票.pdf", OTHER_PDF)],
+        contract_id,
+    )
+    assert uploaded.status_code == 201, uploaded.text
+    items = uploaded.json()["items"]
+    assert len(items) == 2
+    assert all(item["has_file"] for item in items)
+    assert all(item["contract_id"] == contract_id for item in items)
+    assert {item["original_name"] for item in items} == {"第一张发票.pdf", "第二张发票.pdf"}
+
+    first = items[0]
+    preview = logged_in.get(f"/api/v1/invoices/{first['id']}/preview")
+    assert preview.status_code == 200
+    assert preview.headers["content-type"].startswith("application/pdf")
+    assert preview.content.startswith(b"%PDF")
+
+    download = logged_in.get(f"/api/v1/invoices/{first['id']}/download")
+    assert download.status_code == 200
+    assert "attachment" in download.headers.get("content-disposition", "")
+
+    duplicate = _upload(logged_in, [("第一张发票-再传.pdf", MINIMAL_PDF)], contract_id)
+    assert duplicate.status_code == 400
+    assert "已经上传过" in duplicate.json()["detail"]
+
+    listed = logged_in.get("/api/v1/invoices", params={"contract_id": contract_id})
+    assert listed.json()["total"] == 2
+
+    deleted = logged_in.delete(f"/api/v1/invoices/{first['id']}")
+    assert deleted.status_code == 204
+    leftover = logged_in.get("/api/v1/invoices", params={"contract_id": contract_id})
+    assert leftover.json()["total"] == 1
+    missing = logged_in.get(f"/api/v1/invoices/{first['id']}/preview")
+    assert missing.status_code == 404
+    folder = Path("/tmp/portal-test-uploads") / "invoices" / str(first["id"])
+    assert not folder.exists() or not any(folder.iterdir())
+
+
+def test_attach_pdf_to_existing_invoice(logged_in: TestClient) -> None:
+    created = logged_in.post(
+        "/api/v1/invoices",
+        json={"title": "后补文件", "invoice_no": "FP-ATTACH-1", "counterparty": "客户", "amount": "10"},
+    )
+    invoice_id = created.json()["id"]
+    assert created.json()["has_file"] is False
+
+    attached = logged_in.post(
+        f"/api/v1/invoices/{invoice_id}/file",
+        files={"file": ("后补.pdf", MINIMAL_PDF, "application/pdf")},
+    )
+    assert attached.status_code == 200, attached.text
+    assert attached.json()["has_file"] is True
+    assert attached.json()["original_name"] == "后补.pdf"
+
+    rejected = logged_in.post(
+        f"/api/v1/invoices/{invoice_id}/file",
+        files={"file": ("不是发票.txt", b"hello", "text/plain")},
+    )
+    assert rejected.status_code == 400
+
+
+def test_member_can_upload_invoice_pdf(member_client: TestClient) -> None:
+    uploaded = _upload(member_client, [("员工发票.pdf", MINIMAL_PDF)])
+    assert uploaded.status_code == 201, uploaded.text
+    assert uploaded.json()["items"][0]["has_file"] is True

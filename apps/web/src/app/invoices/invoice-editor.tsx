@@ -4,8 +4,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
+import { PdfZoomStage, invoiceDownloadUrl, invoicePreviewUrl } from "@/components/pdf-preview";
 import { Field, FormError, PageHeader } from "@/components/ui";
-import { api, withQuery } from "@/lib/api";
+import { api, uploadFile, withQuery } from "@/lib/api";
 import { useCurrentUser } from "@/lib/current-user";
 import { INVOICE_STATUS_LABEL, type Contract, type Invoice, type PageResult } from "@/lib/types";
 
@@ -39,6 +40,10 @@ export function InvoiceEditor({
   const [contractQuery, setContractQuery] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [hasFile, setHasFile] = useState(false);
+  const [originalName, setOriginalName] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingUrl, setPendingUrl] = useState("");
 
   useEffect(() => {
     if (!ready) return;
@@ -58,6 +63,8 @@ export function InvoiceEditor({
         notes: item.notes ?? "",
         contract_id: item.contract_id ? String(item.contract_id) : "",
       });
+      setHasFile(item.has_file);
+      setOriginalName(item.original_name);
     });
   }, [invoiceId, ready]);
 
@@ -93,6 +100,16 @@ export function InvoiceEditor({
     return () => window.clearTimeout(handle);
   }, [ready, canLinkContract, contractQuery, form.contract_id]);
 
+  useEffect(() => {
+    if (!pendingFile) {
+      setPendingUrl("");
+      return;
+    }
+    const url = URL.createObjectURL(pendingFile);
+    setPendingUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [pendingFile]);
+
   function update(name: keyof typeof EMPTY, value: string) {
     setForm((current) => ({ ...current, [name]: value }));
   }
@@ -110,15 +127,24 @@ export function InvoiceEditor({
       contract_id: canLinkContract || invoiceId ? (form.contract_id ? Number(form.contract_id) : null) : null,
     };
     try {
+      let savedId = invoiceId;
       if (invoiceId) {
         await api(`/api/v1/invoices/${invoiceId}`, {
           method: "PUT",
           body: JSON.stringify(payload),
         });
       } else {
-        await api("/api/v1/invoices", { method: "POST", body: JSON.stringify(payload) });
+        const created = await api<Invoice>("/api/v1/invoices", { method: "POST", body: JSON.stringify(payload) });
+        savedId = created.id;
       }
-      router.push("/invoices");
+      if (pendingFile && savedId) {
+        await uploadFile(`/api/v1/invoices/${savedId}/file`, pendingFile);
+      }
+      if (form.contract_id) {
+        router.push(`/contracts/${form.contract_id}?tab=invoices`);
+      } else {
+        router.push("/invoices");
+      }
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "保存失败");
@@ -126,10 +152,35 @@ export function InvoiceEditor({
     }
   }
 
+  async function onPickPdf(file: File | null) {
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".pdf")) {
+      setError("只接受 PDF 发票");
+      return;
+    }
+    setError("");
+    if (invoiceId) {
+      try {
+        const updated = await uploadFile<Invoice>(`/api/v1/invoices/${invoiceId}/file`, file);
+        setHasFile(updated.has_file);
+        setOriginalName(updated.original_name);
+        setPendingFile(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "上传失败");
+      }
+      return;
+    }
+    setPendingFile(file);
+  }
+
   async function onDelete() {
-    if (!invoiceId || !window.confirm("确定删除这张发票？")) return;
+    if (!invoiceId || !window.confirm("确定删除这张发票？如果有 PDF，文件也会一起删掉。")) return;
     await api(`/api/v1/invoices/${invoiceId}`, { method: "DELETE" });
-    router.push("/invoices");
+    if (form.contract_id) {
+      router.push(`/contracts/${form.contract_id}?tab=invoices`);
+    } else {
+      router.push("/invoices");
+    }
   }
 
   return (
@@ -195,6 +246,21 @@ export function InvoiceEditor({
             </select>
           </div>
         ) : null}
+        <Field label="发票 PDF">
+          <input
+            type="file"
+            accept="application/pdf,.pdf"
+            className="ui-input"
+            onChange={(event) => onPickPdf(event.target.files?.[0] ?? null)}
+          />
+          <span className="mt-2 block text-mid-gray">
+            {pendingFile
+              ? `已选择 ${pendingFile.name}，保存后会附上。`
+              : originalName
+                ? `当前文件：${originalName}`
+                : "可选。合同页也可以一次上传多张。"}
+          </span>
+        </Field>
         <Field label="备注">
           <textarea value={form.notes} onChange={(e) => update("notes", e.target.value)} rows={4} className="ui-input" />
         </Field>
@@ -209,6 +275,16 @@ export function InvoiceEditor({
           ) : null}
         </div>
       </form>
+      {pendingUrl || (invoiceId && hasFile) ? (
+        <div className="ui-card mt-6 overflow-hidden">
+          <PdfZoomStage
+            title={pendingFile?.name || originalName || form.title || "发票 PDF"}
+            src={pendingUrl || (invoiceId ? invoicePreviewUrl(invoiceId) : "")}
+            downloadHref={invoiceId && hasFile && !pendingFile ? invoiceDownloadUrl(invoiceId) : undefined}
+            compact
+          />
+        </div>
+      ) : null}
     </AppShell>
   );
 }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { InvoicesPanel, UploadInvoiceButton } from "./invoices-panel";
 import { AppShell } from "@/components/app-shell";
 import { FileActions, FilePreview } from "@/components/file-preview";
 import { PinnedTable } from "@/components/pinned-table";
@@ -111,9 +112,21 @@ export function ContractWorkspace({
         title={contract.title}
         description={`${contract.source_filename ? `文件 ${contract.source_filename} · ` : ""}编号 ${contract.contract_no || "未编号（内部 ID " + contract.id + "）"} · 合同额 ${money(contract.amount)} · 已开票 ${money(contract.billed_amount)} · 已回款 ${money(contract.collected_amount)}`}
         action={
-          <Link href={`/invoices/new?contract=${contractId}`} className="ui-btn ui-btn-primary">
-            新建发票
-          </Link>
+          tab === "invoices" ? (
+            <UploadInvoiceButton
+              contractId={contractId}
+              onUploaded={async (result) => {
+                if (result.warning_text) setError(result.warning_text);
+                else setError("");
+                await reload();
+              }}
+              onError={setError}
+            />
+          ) : (
+            <Link href={`/invoices/new?contract=${contractId}`} className="ui-btn ui-btn-primary">
+              新建发票
+            </Link>
+          )
         }
       />
       {error ? (
@@ -289,38 +302,7 @@ export function ContractWorkspace({
       ) : null}
 
       {tab === "invoices" ? (
-        <PinnedTable pinLeft={1} pinRight={1}>
-          <thead>
-            <tr>
-              <th>发票</th>
-              <th>代码 / 号码</th>
-              <th className="ui-money">金额</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoices.length === 0 ? (
-              <tr>
-                <td colSpan={3}>
-                  <EmptyHint>还没有发票。识别草稿会列在这里，也可以右上角新建。</EmptyHint>
-                </td>
-              </tr>
-            ) : (
-              invoices.map((item) => (
-                <tr key={item.id}>
-                  <td>
-                    <Link href={`/invoices/${item.id}`} className="font-medium hover:underline">
-                      {item.title}
-                    </Link>
-                  </td>
-                  <td>
-                    {item.invoice_code || "—"} / {item.invoice_no}
-                  </td>
-                  <td className="ui-money">{money(item.amount, item.currency)}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </PinnedTable>
+        <InvoicesPanel contractId={contractId} invoices={invoices} onChanged={reload} onError={setError} />
       ) : null}
 
       {tab === "payments" ? (

@@ -406,3 +406,94 @@ textarea.ui-input {
 .search-hit:focus-visible {
   background: var(--color-canvas);
 }
+
+.drop-zone {
+  display: block;
+  cursor: pointer;
+  border: 1px dashed var(--color-hairline);
+  border-radius: var(--radius-cards);
+  background: var(--color-paper);
+  padding: 24px;
+  text-align: center;
+}
+
+.drop-zone-active {
+  border-color: var(--color-brand);
+  background: var(--color-brand-soft);
+}
+
+.preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 24px;
+}
+
+.preview-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: oklab(0.145 0 0 / 0.28);
+}
+
+.preview-shell {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: min(1100px, 100%);
+  max-height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.preview-stage-wrap {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.preview-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px 0;
+}
+
+.preview-stage {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  margin: 16px 20px 0;
+  border: 1px solid var(--color-hairline);
+  border-radius: 18px;
+  background: var(--color-canvas);
+}
+
+.preview-stage-compact {
+  min-height: 520px;
+}
+
+.preview-frame {
+  display: block;
+  width: 100%;
+  min-height: calc(100vh - 220px);
+  border: 0;
+  background: var(--color-paper);
+  transform-origin: top center;
+}
+
+.preview-stage-compact .preview-frame {
+  min-height: 520px;
+}
+
+.preview-hint {
+  padding: 12px 20px 20px;
+  color: var(--color-mid-gray);
+  font-size: 14px;
+}
