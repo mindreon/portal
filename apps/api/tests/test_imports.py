@@ -132,12 +132,13 @@ def test_collection_and_schedule(logged_in: TestClient) -> None:
     assert summary.json()["count"] >= 1
     payments = logged_in.get("/api/v1/contracts/payments")
     assert payments.status_code == 200
-    assert payments.json()[0]["contract_no"] == "HT-PAY"
+    assert payments.json()["items"][0]["contract_no"] == "HT-PAY"
     filtered = logged_in.get("/api/v1/contracts", params={"party": "客户"})
     assert filtered.status_code == 200
-    assert any(item["contract_no"] == "HT-PAY" for item in filtered.json())
+    assert any(item["contract_no"] == "HT-PAY" for item in filtered.json()["items"])
     miss = logged_in.get("/api/v1/contracts", params={"party": "不存在的主体"})
-    assert miss.json() == []
+    assert miss.json()["items"] == []
+    assert miss.json()["total"] == 0
 
 
 def test_duplicate_bytes_do_not_create_second_contract(logged_in: TestClient, monkeypatch) -> None:
@@ -166,7 +167,7 @@ def test_duplicate_bytes_do_not_create_second_contract(logged_in: TestClient, mo
     assert second.json()["contracts"][0]["id"] == first.json()["contracts"][0]["id"]
     assert "内容相同" in (second.json()["warning_text"] or "")
     listing = logged_in.get("/api/v1/contracts")
-    matches = [item for item in listing.json() if item["party_a"] == "星河科技有限公司"]
+    matches = [item for item in listing.json()["items"] if item["party_a"] == "星河科技有限公司"]
     assert len(matches) == 1
 
 
@@ -269,7 +270,7 @@ def test_upload_returns_placeholders_then_list_shows_filename(logged_in: TestCli
         assert body["files"][0]["parse_status"] in {"pending", "processing"}
         listing = logged_in.get("/api/v1/contracts")
         assert listing.status_code == 200
-        row = listing.json()[0]
+        row = listing.json()["items"][0]
         assert row["source_filename"] == "采购合同.pdf"
         assert row["parse_status"] in {"pending", "processing"}
         assert started.wait(timeout=5)
@@ -279,11 +280,11 @@ def test_upload_returns_placeholders_then_list_shows_filename(logged_in: TestCli
     assert done["status"] == "review"
     assert done["contracts"][0]["contract_no"] == "HT-ASYNC-1"
     listing = logged_in.get("/api/v1/contracts")
-    row = listing.json()[0]
+    row = listing.json()["items"][0]
     assert row["parse_status"] == "done"
     assert row["source_filename"] == "采购合同.pdf"
     by_name = logged_in.get("/api/v1/contracts", params={"party": "采购合同"})
-    assert any(item["id"] == row["id"] for item in by_name.json())
+    assert any(item["id"] == row["id"] for item in by_name.json()["items"])
 
 
 def test_upload_rejects_file_over_limit(logged_in: TestClient, monkeypatch) -> None:

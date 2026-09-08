@@ -71,3 +71,17 @@ export function money(value: string | number, currency = "CNY"): string {
   // 不换行空格：避免「¥」和数字被拆到两行。
   return currency === "CNY" ? `¥\u00a0${formatted}` : `${currency}\u00a0${formatted}`;
 }
+
+/** 拼查询字符串。空值会跳过，避免发出 `q=` 这种无意义参数。 */
+export function withQuery(
+  path: string,
+  params: Record<string, string | number | boolean | null | undefined> = {},
+): string {
+  const qs = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === "" || value === false) continue;
+    qs.set(key, String(value));
+  }
+  const suffix = qs.toString();
+  return suffix ? `${path}?${suffix}` : path;
+}

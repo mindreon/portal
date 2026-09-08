@@ -1,15 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import Select, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from sqlalchemy.sql.elements import ColumnElement
 
 from app.core.access import require_module
 from app.core.deps import get_current_user
+from app.core.paging import clamp_page
 from app.db.session import get_db
 from app.models.contract import Contract
 from app.models.invoice import Invoice
 from app.models.user import User
-from app.schemas.invoice import INVOICE_STATUSES, InvoiceIn, InvoiceOut
+from app.schemas.invoice import INVOICE_STATUSES, InvoiceIn, InvoiceOut, InvoiceSummary
+from app.schemas.page import PageOut
 
 router = APIRouter(
     prefix="/invoices",
@@ -18,12 +21,52 @@ router = APIRouter(
 )
 
 
-@router.get("", response_model=list[InvoiceOut])
+def _invoice_text_filter(text: str | None) -> ColumnElement[bool] | None:
+    if not text or not text.strip():
+        return None
+    needle = f"%{text.strip().lower()}%"
+    return or_(
+        func.lower(Invoice.title).like(needle),
+        func.lower(Invoice.invoice_no).like(needle),
+        func.lower(func.coalesce(Invoice.invoice_code, "")).like(needle),
+        func.lower(Invoice.counterparty).like(needle),
+    )
+
+
+def _filtered_invoices(q: str | None, contract_id: int | None) -> Select[tuple[Invoice]]:
+    query = select(Invoice)
+    cond = _invoice_text_filter(q)
+    if cond is not None:
+        query = query.where(cond)
+    if contract_id is not None:
+        query = query.where(Invoice.contract_id == contract_id)
+    return query
+
+
+@router.get("", response_model=PageOut[InvoiceOut])
 def list_invoices(
+    q: str | None = None,
+    contract_id: int | None = None,
+    page: int = 1,
+    page_size: int = 10,
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
-) -> list[Invoice]:
-    return list(db.scalars(select(Invoice).order_by(Invoice.id.desc())))
+) -> PageOut[InvoiceOut]:
+    page, page_size, offset = clamp_page(page, page_size)
+    filtered = _filtered_invoices(q, contract_id)
+    total = db.scalar(select(func.count()).select_from(filtered.subquery())) or 0
+    rows = list(db.scalars(filtered.order_by(Invoice.id.desc()).offset(offset).limit(page_size)))
+    return PageOut(items=rows, total=total, page=page, page_size=page_size)
+
+
+@router.get("/summary", response_model=InvoiceSummary)
+def invoice_summary(
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> InvoiceSummary:
+    count = db.scalar(select(func.count()).select_from(Invoice)) or 0
+    issued_count = db.scalar(select(func.count()).select_from(Invoice).where(Invoice.status == "issued")) or 0
+    return InvoiceSummary(count=count, issued_count=issued_count)
 
 
 @router.post("", response_model=InvoiceOut, status_code=201)

@@ -21,6 +21,13 @@ export type AuthConfig = {
   dev_login_enabled: boolean;
 };
 
+export type PageResult<T> = {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number;
+};
+
 export type Contract = {
   id: number;
   title: string;
@@ -107,6 +114,12 @@ export type ContractSummary = {
   total_amount: string;
   collected_amount: string;
   outstanding_amount: string;
+  parsing_count: number;
+};
+
+export type InvoiceSummary = {
+  count: number;
+  issued_count: number;
 };
 
 export type CollectionRow = Collection & {
@@ -115,6 +128,10 @@ export type CollectionRow = Collection & {
   party_a: string;
   party_b: string;
   schedule_name: string | null;
+};
+
+export type CollectionPage = PageResult<CollectionRow> & {
+  total_amount: string;
 };
 
 export const CONTRACT_STATUS_LABEL: Record<string, string> = {

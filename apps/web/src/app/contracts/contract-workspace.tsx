@@ -9,7 +9,7 @@ import { FileActions, FilePreview } from "@/components/file-preview";
 import { PinnedTable } from "@/components/pinned-table";
 import { StatusBadge } from "@/components/status-badge";
 import { EmptyHint, Field, FormError, PageHeader } from "@/components/ui";
-import { api, money } from "@/lib/api";
+import { api, money, withQuery } from "@/lib/api";
 import { useImportLive } from "@/lib/live";
 import {
   CONTRACT_STATUS_LABEL,
@@ -17,6 +17,7 @@ import {
   type Contract,
   type ContractFile,
   type Invoice,
+  type PageResult,
   type PaymentSchedule,
 } from "@/lib/types";
 
@@ -43,13 +44,15 @@ export function ContractWorkspace({
     const [nextContract, nextFiles, nextInvoices, nextSchedules, nextCollections] = await Promise.all([
       api<Contract>(`/api/v1/contracts/${contractId}`),
       api<ContractFile[]>(`/api/v1/contracts/${contractId}/files`),
-      api<Invoice[]>("/api/v1/invoices"),
+      api<PageResult<Invoice>>(
+        withQuery("/api/v1/invoices", { contract_id: contractId, page: 1, page_size: 100 }),
+      ),
       api<PaymentSchedule[]>(`/api/v1/contracts/${contractId}/schedules`),
       api<Collection[]>(`/api/v1/contracts/${contractId}/collections`),
     ]);
     setContract(nextContract);
     setFiles(nextFiles);
-    setInvoices(nextInvoices.filter((item) => item.contract_id === contractId));
+    setInvoices(nextInvoices.items);
     setSchedules(nextSchedules);
     setCollections(nextCollections);
   }

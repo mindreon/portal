@@ -6,10 +6,10 @@ import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { PinnedTable } from "@/components/pinned-table";
 import { StatusBadge } from "@/components/status-badge";
-import { EmptyHint, PageHeader, PartyStack } from "@/components/ui";
-import { api, money } from "@/lib/api";
+import { EmptyHint, PAGE_SIZE, PageHeader, Pager, PartyStack } from "@/components/ui";
+import { api, money, withQuery } from "@/lib/api";
 import { useImportLive } from "@/lib/live";
-import type { Contract, ContractSummary } from "@/lib/types";
+import type { Contract, ContractSummary, PageResult } from "@/lib/types";
 
 function isParsing(status: string) {
   return status === "pending" || status === "processing";
@@ -24,37 +24,53 @@ function fileLabel(row: Contract) {
 
 export default function ContractsPage() {
   const [rows, setRows] = useState<Contract[]>([]);
+  const [total, setTotal] = useState(0);
   const [summary, setSummary] = useState<ContractSummary | null>(null);
   const [party, setParty] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-
-  async function load(nextParty = party, nextFrom = dateFrom, nextTo = dateTo) {
-    const params = new URLSearchParams();
-    if (nextParty.trim()) params.set("party", nextParty.trim());
-    if (nextFrom) params.set("date_from", nextFrom);
-    if (nextTo) params.set("date_to", nextTo);
-    const query = params.toString();
-    const [list, nextSummary] = await Promise.all([
-      api<Contract[]>(`/api/v1/contracts${query ? `?${query}` : ""}`),
-      api<ContractSummary>("/api/v1/contracts/summary"),
-    ]);
-    setRows(list);
-    setSummary(nextSummary);
-  }
+  const [filters, setFilters] = useState({ party: "", dateFrom: "", dateTo: "" });
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      const [list, nextSummary] = await Promise.all([
+        api<PageResult<Contract>>(
+          withQuery("/api/v1/contracts", {
+            party: filters.party,
+            date_from: filters.dateFrom,
+            date_to: filters.dateTo,
+            page,
+            page_size: PAGE_SIZE,
+          }),
+        ),
+        api<ContractSummary>("/api/v1/contracts/summary"),
+      ]);
+      if (cancelled) return;
+      setRows(list.items);
+      setTotal(list.total);
+      setSummary(nextSummary);
+      if (list.total > 0 && list.items.length === 0 && page > 1) {
+        setPage(list.page > 1 ? list.page - 1 : 1);
+      }
+    }
     load().catch(() => undefined);
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [filters, page]);
 
-  const parsing = rows.some((row) => isParsing(row.parse_status));
+  const parsing = (summary?.parsing_count ?? 0) > 0 || rows.some((row) => isParsing(row.parse_status));
+
   useImportLive(parsing, () => {
-    load().catch(() => undefined);
+    setFilters((current) => ({ ...current }));
   });
 
   function onFilter(event: React.FormEvent) {
     event.preventDefault();
-    load().catch(() => undefined);
+    setPage(1);
+    setFilters({ party: party.trim(), dateFrom, dateTo });
   }
 
   return (
@@ -108,7 +124,8 @@ export default function ContractsPage() {
               setParty("");
               setDateFrom("");
               setDateTo("");
-              load("", "", "").catch(() => undefined);
+              setPage(1);
+              setFilters({ party: "", dateFrom: "", dateTo: "" });
             }}
           >
             重置
@@ -183,6 +200,7 @@ export default function ContractsPage() {
           )}
         </tbody>
       </PinnedTable>
+      <Pager page={page} total={total} onPage={setPage} />
     </AppShell>
   );
 }
