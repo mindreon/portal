@@ -68,5 +68,6 @@ export function money(value: string | number, currency = "CNY"): string {
   const formatted = Number.isFinite(amount)
     ? amount.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : String(value);
-  return currency === "CNY" ? `¥ ${formatted}` : `${currency} ${formatted}`;
+  // 不换行空格：避免「¥」和数字被拆到两行。
+  return currency === "CNY" ? `¥\u00a0${formatted}` : `${currency}\u00a0${formatted}`;
 }

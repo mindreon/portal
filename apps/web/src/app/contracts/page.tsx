@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { PinnedTable } from "@/components/pinned-table";
 import { StatusBadge } from "@/components/status-badge";
-import { EmptyHint, PageHeader } from "@/components/ui";
+import { EmptyHint, PageHeader, PartyStack } from "@/components/ui";
 import { api, money } from "@/lib/api";
 import { useImportLive } from "@/lib/live";
 import type { Contract, ContractSummary } from "@/lib/types";
@@ -154,10 +154,10 @@ export default function ContractsPage() {
                   </p>
                 </td>
                 <td>
-                  {row.party_a || "—"} / {row.party_b || row.counterparty || "—"}
+                  <PartyStack a={row.party_a} b={row.party_b || row.counterparty} />
                 </td>
-                <td>{money(row.amount, row.currency)}</td>
-                <td>{money(row.collected_amount, row.currency)}</td>
+                <td className="whitespace-nowrap tabular-nums">{money(row.amount, row.currency)}</td>
+                <td className="whitespace-nowrap tabular-nums">{money(row.collected_amount, row.currency)}</td>
                 <td>
                   {isParsing(row.parse_status) || row.parse_status === "failed" ? (
                     <StatusBadge kind="parse" value={row.parse_status} />

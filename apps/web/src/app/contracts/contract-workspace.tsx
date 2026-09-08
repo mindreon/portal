@@ -312,7 +312,7 @@ export function ContractWorkspace({
                   <td>
                     {item.invoice_code || "—"} / {item.invoice_no}
                   </td>
-                  <td>{money(item.amount, item.currency)}</td>
+                  <td className="whitespace-nowrap tabular-nums">{money(item.amount, item.currency)}</td>
                 </tr>
               ))
             )}

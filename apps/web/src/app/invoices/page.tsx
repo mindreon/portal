@@ -55,7 +55,7 @@ export default function InvoicesPage() {
                   <p className="mt-1 text-[12px] text-mid-gray">{row.invoice_no}</p>
                 </td>
                 <td>{row.counterparty}</td>
-                <td>{money(row.amount, row.currency)}</td>
+                <td className="whitespace-nowrap tabular-nums">{money(row.amount, row.currency)}</td>
                 <td>
                   <StatusBadge kind="invoice" value={row.status} />
                 </td>
