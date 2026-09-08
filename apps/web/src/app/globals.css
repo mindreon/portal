@@ -146,6 +146,7 @@ a {
   line-height: 1.2;
   letter-spacing: -0.75px;
   color: var(--color-ink);
+  white-space: nowrap;
 }
 
 .ui-card {

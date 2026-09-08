@@ -189,9 +189,9 @@ export default function ContractsPage() {
 
 function StatBlock({ label, value }: { label: string; value: string }) {
   return (
-    <div className="ui-card min-w-0 overflow-hidden p-6">
+    <div className="ui-card min-w-0 p-6">
       <p className="eyebrow">{label}</p>
-      <p className="stat-value mt-3 break-words">{value}</p>
+      <p className="stat-value mt-3">{value}</p>
     </div>
   );
 }
