@@ -112,7 +112,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <p className="font-medium text-ink">{user?.name ?? "加载中…"}</p>
           <p className="mt-1.5 text-mid-gray">{user?.role === "admin" ? "管理员" : "成员"}</p>
           {user?.role === "admin" ? (
-            <Link href="/settings/access" className="mt-3 block font-medium text-ink underline-offset-4 hover:underline">
+            <Link
+              href="/settings/access"
+              className={`mt-3 -mx-3.5 block rounded-[18px] px-3.5 py-2.5 text-[14px] font-medium ${
+                pathname.startsWith("/settings") ? "bg-paper text-ink" : "text-ink hover:bg-paper"
+              }`}
+            >
               权限管理
             </Link>
           ) : null}
