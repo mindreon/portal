@@ -46,12 +46,18 @@ export function TextLink({ href, children }: { href: string; children: React.Rea
   );
 }
 
-/** 甲方、乙方各占一行，长公司名不会把后面的金额挤换行。 */
+/** 甲方、乙方各占一行。前面标甲/乙，扫一眼就能对上。 */
 export function PartyStack({ a, b }: { a?: string | null; b?: string | null }) {
   return (
-    <div className="min-w-[220px] space-y-2">
-      <p>{a?.trim() || "—"}</p>
-      <p>{b?.trim() || "—"}</p>
+    <div className="ui-party-stack">
+      <p>
+        <span className="text-mid-gray">甲 </span>
+        {a?.trim() || "—"}
+      </p>
+      <p>
+        <span className="text-mid-gray">乙 </span>
+        {b?.trim() || "—"}
+      </p>
     </div>
   );
 }

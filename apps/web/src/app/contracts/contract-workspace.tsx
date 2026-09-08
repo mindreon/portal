@@ -291,7 +291,7 @@ export function ContractWorkspace({
             <tr>
               <th>发票</th>
               <th>代码 / 号码</th>
-              <th>金额</th>
+              <th className="ui-money">金额</th>
             </tr>
           </thead>
           <tbody>
@@ -312,7 +312,7 @@ export function ContractWorkspace({
                   <td>
                     {item.invoice_code || "—"} / {item.invoice_no}
                   </td>
-                  <td className="whitespace-nowrap tabular-nums">{money(item.amount, item.currency)}</td>
+                  <td className="ui-money">{money(item.amount, item.currency)}</td>
                 </tr>
               ))
             )}
@@ -542,7 +542,7 @@ function ScheduleTableRow({
           </span>
         )}
       </td>
-      <td>
+      <td className="ui-money">
         {mode === "edit" ? (
           <input
             type="number"
@@ -558,7 +558,7 @@ function ScheduleTableRow({
           money(item.amount)
         )}
       </td>
-      <td>
+      <td className="ui-money">
         {mode === "collect" || (mode === "edit" && singleReceipt) ? (
           <input
             type="number"
@@ -660,7 +660,7 @@ function LooseCollectionRow({
         <span className="font-medium">未指定期次</span>
       </td>
       <td>—</td>
-      <td>
+      <td className="ui-money">
         {editing ? (
           <input
             type="number"
@@ -741,8 +741,8 @@ function PaymentsPanel({
         <thead>
           <tr>
             <th>期次</th>
-            <th>计划金额</th>
-            <th>已回款</th>
+            <th className="ui-money">计划金额</th>
+            <th className="ui-money">已回款</th>
             <th>到账日</th>
             <th>操作</th>
           </tr>

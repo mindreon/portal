@@ -41,9 +41,9 @@ export default function ContractPaymentsPage() {
           <tr>
             <th>到账日</th>
             <th>合同</th>
-            <th>甲 / 乙</th>
+            <th>甲乙</th>
             <th>期次</th>
-            <th>金额</th>
+            <th className="ui-money">金额</th>
           </tr>
         </thead>
         <tbody>
@@ -67,7 +67,7 @@ export default function ContractPaymentsPage() {
                   <PartyStack a={row.party_a} b={row.party_b} />
                 </td>
                 <td>{row.schedule_name || "—"}</td>
-                <td className="whitespace-nowrap tabular-nums">{money(row.amount)}</td>
+                <td className="ui-money">{money(row.amount)}</td>
               </tr>
             ))
           )}

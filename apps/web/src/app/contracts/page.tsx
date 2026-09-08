@@ -75,7 +75,7 @@ export default function ContractsPage() {
         <StatBlock label="待回款" value={money(summary?.outstanding_amount ?? 0)} />
       </section>
 
-          {parsing ? (
+      {parsing ? (
         <p className="mb-6 text-body text-mid-gray">有合同正在后台识别，完成后会自动更新。离开或刷新页面不会中断。</p>
       ) : null}
 
@@ -121,9 +121,9 @@ export default function ContractsPage() {
           <tr>
             <th>文件名</th>
             <th>合同</th>
-            <th>甲 / 乙</th>
-            <th>金额</th>
-            <th>已回款</th>
+            <th>甲乙</th>
+            <th className="ui-money">金额</th>
+            <th className="ui-money">已回款</th>
             <th>状态</th>
             <th>操作</th>
           </tr>
@@ -156,8 +156,8 @@ export default function ContractsPage() {
                 <td>
                   <PartyStack a={row.party_a} b={row.party_b || row.counterparty} />
                 </td>
-                <td className="whitespace-nowrap tabular-nums min-w-[9rem]">{money(row.amount, row.currency)}</td>
-                <td className="whitespace-nowrap tabular-nums min-w-[7rem]">{money(row.collected_amount, row.currency)}</td>
+                <td className="ui-money">{money(row.amount, row.currency)}</td>
+                <td className="ui-money">{money(row.collected_amount, row.currency)}</td>
                 <td>
                   {isParsing(row.parse_status) || row.parse_status === "failed" ? (
                     <StatusBadge kind="parse" value={row.parse_status} />
