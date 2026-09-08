@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "targets": {
+    "/": {
+      "targetKind": "existing-ui",
+      "projectId": "4921ad83-77ac-4622-afec-1e1efed25ebb",
+      "baselineDraftId": "4cc665cd-dc4e-4c7f-b17f-f206302bf1ef",
+      "activeDraftId": "4cc665cd-dc4e-4c7f-b17f-f206302bf1ef",
+      "designSystemPath": ".superdesign/design-system.md",
+      "referenceIds": [
+        "8c365090-095a-4b4d-b19d-d1fd5c84e595",
+        "apps-web-src-components-logo.tsx"
+      ],
+      "brandAssets": {
+        "logo": {
+          "assetKey": "apps-web-src-components-logo.tsx",
+          "url": "https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/4921ad83-77ac-4622-afec-1e1efed25ebb/brand-assets/apps-web-src-components-logo.tsx/logo-mark.svg",
+          "sourcePath": ".superdesign/assets/logo-mark.svg"
+        }
+      },
+      "contextFiles": [
+        ".superdesign/design-system.md",
+        "apps/web/src/app/page.tsx",
+        "apps/web/src/components/app-shell.tsx",
+        "apps/web/src/components/ui.tsx",
+        "apps/web/src/components/logo.tsx",
+        "apps/web/src/components/breadcrumbs.tsx",
+        "apps/web/src/components/search-palette.tsx",
+        "apps/web/src/lib/modules.ts",
+        "apps/web/src/app/globals.css",
+        ".superdesign/init/theme.md"
+      ],
+      "fingerprints": {
+        ".superdesign/design-system.md": "a8083956f4a4dc59550ea521d5de9a40521ae89ccbac83dfabf0eae59e7131af",
+        "apps/web/src/app/page.tsx": "c0c51f2d2a88209e89e243cf666de8264f3b4a10497e55eca638429d4f20bd7c",
+        "apps/web/src/components/app-shell.tsx": "29eee5e2c693b0f409a1525879b460996adb2b3454d73d2e26eb3f8614e7c523",
+        "apps/web/src/components/ui.tsx": "3f00db8a5a6d3790cd01ab3dd934053fc068629c3904c38db33b44c04e98c6d9",
+        "apps/web/src/components/logo.tsx": "a7b2dd7f5de62a3788ada42a80b8e7c98e51cdf47f04fe2e8a999b52ba46c1fb",
+        "apps/web/src/components/breadcrumbs.tsx": "01842c2dcb76eec393074affdb8dd2082d029b6f86b83030e157e7a99b45dd5c",
+        "apps/web/src/components/search-palette.tsx": "d40638eed8ac9938ce90419cbfeb42f8983c4ec706d26b129888f944e8b903d6",
+        "apps/web/src/lib/modules.ts": "bb8224650ba58890a17038c0826f7c50b38937d894079cf9dde87ad0286ef7a2",
+        "apps/web/src/app/globals.css": "3f6303b17b97f50733e4f0cc33847d8d069eab86f2f52b8975f7f4604a8a3dc1",
+        ".superdesign/init/theme.md": "15d5b61761f773196ddde9397715cbe1f8c0dba6bb61a9363d63ed8b06d14fe1"
+      },
+      "components": [
+        {
+          "name": "AppShell",
+          "id": "8f4a4d4c-188e-4d5c-bd07-f4b1868a03c8",
+          "sourcePath": "apps/web/src/components/app-shell.tsx",
+          "logoAssetKey": "apps-web-src-components-logo.tsx"
+        }
+      ],
+      "drafts": {
+        "4cc665cd-dc4e-4c7f-b17f-f206302bf1ef": {
+          "title": "Portal Workbench — Refreshed",
+          "visualDirection": "cool slate workspace with brand-blue icons, no duplicate English labels",
+          "currentVersion": 2
+        }
+      },
+      "updatedAt": "2026-09-08T07:38:56Z"
+    }
+  }
+}

@@ -1,79 +1,88 @@
 # Portal Design System
 
-> Source of truth for Superdesign. Current product UI is the monochrome workbench in `DESIGN.md`.
+> Iteration target for the workbench refresh. Keep the information architecture; stop looking like a grayscale wireframe.
 
 **Product:** Portal — 公司内部业务系统  
 **Audience:** 内部同事（管理员 + 普通成员），中文界面  
-**Platform:** Desktop-first web (sidebar at ≥1024px, chips below)  
+**Platform:** Desktop-first web  
 **Theme:** light
 
 ## Product context & JTBD
 
-合同和发票是两间独立房间。工作台 `/` 是大厅：用卡片进房间，看今日数字和最近记录。侧栏在大厅列出全部模块；进入房间后侧栏只显示该房间子功能。权限由管理员在「权限管理」勾选。
+合同和发票是两间独立房间。工作台 `/` 是大厅：用卡片进房间，看今日数字和最近记录。侧栏在大厅列出全部模块。权限由管理员在「权限管理」勾选。
 
-Key pages: `/` 工作台, `/contracts`, `/invoices`, `/settings/access`, `/login`.
+## Visual direction (refresh)
 
-## Branding & styling (current live UI)
+Soft **product workspace**, not a landing page and not a wireframe.
 
-shadcn/ui 式单色工作台：纯白卡片、浅灰画布 `#f5f5f5`、大圆角 24px 卡片靠发丝描边浮起来。几乎全是无彩色——黑字、白面、灰辅助。**唯一红色 `#e7000b` 只留给删除和错误。**
+- Canvas is a cool slate-blue wash, not dead gray.
+- Sidebar is white with a hairline edge; the active item uses a pale blue well and a colored icon.
+- Every module has a recognizable icon. Cards get a 40px rounded icon tile.
+- Chinese titles stand alone. **Never** stack an English uppercase duplicate (`WORKBENCH`, `CONTRACTS`, `INVOICES`) above or below the Chinese name.
+- Keep Geist / Noto Sans SC, 24px cards, 18px controls, and the real Portal logo.
 
-Font: Geist 400/500/600 + PingFang SC / Noto Sans SC. Headings tight tracking. Body 14px.
-
-### Colors
+## Colors
 
 | Token | Value | Role |
 | --- | --- | --- |
-| Canvas | `#f5f5f5` | Page, muted fills, secondary buttons |
-| Paper | `#ffffff` | Cards, active nav item |
-| Surface Alt | `#fafafa` | Sidebar, table header |
-| Ink | `#0a0a0a` | Text, primary button |
-| Ink Soft | `#171717` | Solid badges |
-| Mid Gray | `#737373` | Muted text, English eyebrows |
-| Hairline | `#e5e5e5` | Borders |
-| Ember | `#e7000b` | Destructive only |
+| Canvas | `#F1F4F8` | Page background |
+| Paper | `#FFFFFF` | Cards, sidebar |
+| Sidebar line | `#E8ECF1` | Sidebar right border |
+| Ink | `#0F172A` | Headings, primary text (slate-900) |
+| Mid | `#64748B` | Secondary text (slate-500) |
+| Hairline | `#E2E8F0` | Card borders |
+| Brand | `#2563EB` | Active nav, links, workbench / contract icons |
+| Brand soft | `#EFF4FF` | Active nav background |
+| Teal | `#0F766E` | Invoice icon |
+| Teal soft | `#CCFBF1` | Invoice icon well |
+| Blue soft | `#DBEAFE` | Contract icon well |
+| Ember | `#e7000b` | Destructive / error only |
 
-### Type
+Primary filled button stays ink (`#0F172A` on white text). Do not invent pink, purple, neon, or serif headlines. No full-page gradients. No glassmorphism blobs.
 
-- `.eyebrow`: 12px / 500 / 0.6px / uppercase / mid-gray — used for English labels (WORKBENCH, CONTRACTS, INVOICES) next to Chinese titles
-- `.heading`: 30px / 600 / -0.75px
-- `.heading-sm`: 24px / 600
-- `.heading-display`: 48px login only
-- Nav item: 14px Chinese + 12px uppercase English hint
+## Typography
 
-### Shape & elevation
+- Family: Geist, PingFang SC, Noto Sans SC. Weights 400 / 500 / 600.
+- Body 14px. Page title 30px/600, tight tracking. Card titles 20–24px/600.
+- Helper text 13–14px slate-500. **No 12px uppercase English eyebrows** next to Chinese titles.
+- Logo lockup may keep “Internal” / “Portal” — that is the product name, not a duplicate of 工作台.
 
-- Cards 24px radius, 1px hairline + `--shadow-subtle`
-- Buttons/inputs/nav pills 18px, height 40px
-- Nested 10px
-- Sidebar 264px, no divider
-- Content max 1280px, padding 24–40px
+## Icons
 
-### Components
+Use `iconify-icon` (Lucide set). 20px stroke in the sidebar, 22px in module tiles.
 
-- Primary button: ink fill, `#fafafa` text
-- Secondary: canvas fill
-- Sidebar active: paper white rounded 18px, no icon
-- Logo: 28×28 black rounded-square with white “P” path; lockup “Internal” / “Portal”
-- Status badges: grayscale pills only
-- Search: canvas capsule + `⌘K`
+| Place | Icon |
+| --- | --- |
+| 工作台 | `lucide:layout-dashboard` |
+| 合同 | `lucide:file-text` |
+| 发票 | `lucide:receipt` |
+| 权限管理 | `lucide:shield` |
+| 搜索 | `lucide:search` |
+| 进入 | `lucide:arrow-right` |
 
-### Layout (Workbench)
+Icon tiles on module cards: 44×44, radius 14px, tinted well + brand-colored icon.
 
-Left: LogoLockup, then 工作台 (active) with hint 全部模块, 合同 + CONTRACTS, 发票 + INVOICES. Footer: name, 管理员, 权限管理, 退出登录.
+## Shape
 
-Right header: breadcrumb “工作台” + search trigger.
+- Cards 24px, 1px hairline, light shadow
+- Nav items 14px radius, 8px vertical padding, icon + label in a row
+- Buttons / search 18px height 40px
+- Sidebar 264px
 
-Main: eyebrow WORKBENCH, heading 工作台, gray description. Then 2-col white module cards (English eyebrow, Chinese title, summary, “进入 →”). Then 3-col stats. Then recent lists.
+## Workbench layout (after refresh)
 
-**No icons anywhere except the logo mark and breadcrumb chevron.**
+Left: logo lockup (exact Brand Asset logo, never initials/emoji/generic mark) → nav rows with icon + Chinese label only. 工作台 shows a small Chinese helper “全部模块” (not English). Footer: name, 管理员, 权限管理 with shield icon, 退出登录.
+
+Right header: breadcrumb 工作台 + search with search icon and ⌘K.
+
+Main: **no Workbench eyebrow**. Heading 工作台 + description. Two module cards with icon tile, Chinese title, summary, “进入” + arrow icon. Three stats with a small matching icon. Two recent lists unchanged in content.
 
 ## Motion
 
-None. Instant hover background changes only.
+Hover: card border/shadow slightly stronger; nav well appears. No looping animation.
 
-## Constraints for pixel-perfect reproduction
+## Constraints
 
-- Keep Geist, black/white/gray palette, 24px cards, 18px controls
-- Keep English uppercase eyebrows and sidebar hints exactly as in source
-- Do not invent colored status, illustrations, or extra chrome
-- Do not replace the logo with initials or a different mark
+- Use ONLY these fonts, colors, spacing, and icon choices
+- Keep the real Portal logo URL in every logo position
+- Remove duplicate English labels everywhere except the product lockup “Internal / Portal”
