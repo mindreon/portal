@@ -241,6 +241,14 @@ def test_preview_is_inline_and_download_is_attachment(logged_in: TestClient, mon
     assert preview.headers["content-type"].startswith("application/pdf")
     assert "inline" in preview.headers["content-disposition"]
     assert "attachment" in download.headers["content-disposition"]
+    assert preview.headers["cache-control"] == "private, max-age=86400"
+    assert preview.headers["x-accel-buffering"] == "no"
+    assert preview.headers.get("etag")
+    cached = logged_in.get(
+        f"/api/v1/contracts/imports/files/{file_id}/preview",
+        headers={"If-None-Match": preview.headers["etag"]},
+    )
+    assert cached.status_code == 304
 
 
 def test_upload_returns_placeholders_then_list_shows_filename(logged_in: TestClient, monkeypatch) -> None:

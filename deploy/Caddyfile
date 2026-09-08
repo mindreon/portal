@@ -8,6 +8,11 @@
 		}
 	}
 
+	# PDF / 图片已经压缩过。再 gzip 只会多耗 CPU，预览首字节更慢。
+	handle /api/v1/contracts/imports/files/* {
+		reverse_proxy api:8000
+	}
+
 	handle /api* {
 		encode gzip
 		reverse_proxy api:8000
