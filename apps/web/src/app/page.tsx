@@ -5,8 +5,8 @@ import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { Icon, ModuleIconTile, type IconName } from "@/components/icons";
-import { PageHeader, TextLink } from "@/components/ui";
-import { api, money } from "@/lib/api";
+import { PageHeader } from "@/components/ui";
+import { api } from "@/lib/api";
 import { useCurrentUser } from "@/lib/current-user";
 import type { Contract, Invoice } from "@/lib/types";
 
@@ -66,35 +66,6 @@ export default function HomePage() {
           ) : null}
         </section>
       ) : null}
-
-      <section className={`mt-8 grid gap-6 ${showContracts && showInvoices ? "lg:grid-cols-2" : ""}`}>
-        {showContracts ? (
-          <RecentList
-            title="合同"
-            href="/contracts"
-            empty="合同还是空的，进合同模块建第一条。"
-            rows={contracts.slice(0, 5).map((item) => ({
-              id: item.id,
-              title: item.title,
-              meta: `${item.counterparty} · ${money(item.amount, item.currency)}`,
-              href: `/contracts/${item.id}`,
-            }))}
-          />
-        ) : null}
-        {showInvoices ? (
-          <RecentList
-            title="发票"
-            href="/invoices"
-            empty="发票还是空的，进发票模块建第一条。"
-            rows={invoices.slice(0, 5).map((item) => ({
-              id: item.id,
-              title: item.title,
-              meta: `${item.invoice_no} · ${money(item.amount, item.currency)}`,
-              href: `/invoices/${item.id}`,
-            }))}
-          />
-        ) : null}
-      </section>
     </AppShell>
   );
 }
@@ -118,40 +89,5 @@ function StatCard({
       </p>
       <p className="stat-value mt-3">{value}</p>
     </Link>
-  );
-}
-
-function RecentList({
-  title,
-  href,
-  empty,
-  rows,
-}: {
-  title: string;
-  href: string;
-  empty: string;
-  rows: { id: number; title: string; meta: string; href: string }[];
-}) {
-  return (
-    <div className="ui-card p-6">
-      <div className="mb-5 flex items-end justify-between gap-4">
-        <h3 className="heading-sm">{title}</h3>
-        <TextLink href={href}>查看全部</TextLink>
-      </div>
-      {rows.length === 0 ? (
-        <p className="text-body text-mid-gray">{empty}</p>
-      ) : (
-        <ul className="space-y-1.5">
-          {rows.map((row) => (
-            <li key={row.id}>
-              <Link href={row.href} className="block rounded-[10px] px-3 py-3 hover:bg-canvas">
-                <p className="font-medium text-ink">{row.title}</p>
-                <p className="mt-1 text-body text-mid-gray">{row.meta}</p>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
   );
 }
