@@ -352,7 +352,7 @@ textarea.ui-input {
 .ui-table th,
 .ui-table td {
   padding: 14px 24px;
-  vertical-align: top;
+  vertical-align: middle;
 }
 
 /* 金额列：表格会按比例挤列宽，min-width 经常被忽略。nowrap + width:1% 让这一列跟着数字变宽，不把 ¥ 拆行。 */
@@ -363,7 +363,7 @@ textarea.ui-input {
   width: 1%;
 }
 
-/* 操作列：同一行，并在格子里水平、垂直居中。 */
+/* 操作列：同一行，格子里水平居中；垂直居中跟其它列一起走。 */
 .ui-table th.ui-actions,
 .ui-table td.ui-actions {
   white-space: nowrap;
