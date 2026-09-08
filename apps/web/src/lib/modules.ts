@@ -48,7 +48,23 @@ export const MODULES: BusinessModule[] = [
   },
 ];
 
+/**
+ * 权限管理不是业务房间，不出现在工作台卡片里。
+ * 只有管理员能进：给每个同事勾选合同 / 发票。
+ */
+export const SETTINGS_MODULE: BusinessModule = {
+  id: "settings",
+  name: "权限",
+  href: "/settings/access",
+  hint: "Access",
+  summary: "给每个人勾选能进的房间。",
+  features: [{ href: "/settings/access", label: "人员权限" }],
+};
+
 export function moduleByPath(pathname: string): BusinessModule | null {
+  if (pathname === SETTINGS_MODULE.href || pathname.startsWith("/settings/")) {
+    return SETTINGS_MODULE;
+  }
   return MODULES.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`)) ?? null;
 }
 
@@ -88,12 +104,13 @@ export function modulesFor(user: CurrentUser | null): BusinessModule[] {
 }
 
 export function canAccessModule(user: CurrentUser | null, moduleId: string) {
-  return Boolean(user?.modules.includes(moduleId));
+  if (moduleId === SETTINGS_MODULE.id) return user?.role === "admin";
+  return Boolean(user?.modules?.includes(moduleId));
 }
 
 export function searchShortcuts(user: CurrentUser | null) {
   const visible = modulesFor(user);
-  return [
+  const shortcuts = [
     { href: "/", title: "工作台", meta: "全部模块" },
     ...visible.flatMap((item) => [
       { href: item.href, title: item.name, meta: "独立模块" },
@@ -102,4 +119,8 @@ export function searchShortcuts(user: CurrentUser | null) {
         .map((feature) => ({ href: feature.href, title: feature.label, meta: item.name })),
     ]),
   ];
+  if (user?.role === "admin") {
+    shortcuts.push({ href: SETTINGS_MODULE.href, title: "权限管理", meta: "给同事勾选模块" });
+  }
+  return shortcuts;
 }

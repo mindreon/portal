@@ -36,7 +36,7 @@ export default function HomePage() {
       <PageHeader
         eyebrow="Workbench"
         title="工作台"
-        description="每个业务是一间独立的房间。菜单按你的权限显示；没有权限的房间不会出现，直接打开链接也会被拦住。"
+        description="每个业务是一间独立的房间。菜单按你的权限显示；管理员在左下角「权限管理」里给同事勾选房间。"
       />
 
       <section className="grid gap-6 sm:grid-cols-2">

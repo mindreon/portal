@@ -6,11 +6,13 @@ import { Suspense, useEffect, useState } from "react";
 import { LogoMark } from "@/components/logo";
 import { Field, FormError } from "@/components/ui";
 import { api } from "@/lib/api";
+import { useCurrentUser } from "@/lib/current-user";
 import type { AuthConfig } from "@/lib/types";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { reload } = useCurrentUser();
   const [config, setConfig] = useState<AuthConfig | null>(null);
   const [name, setName] = useState("本地管理员");
   const [error, setError] = useState(searchParams.get("error") ?? "");
@@ -44,6 +46,7 @@ function LoginForm() {
         body: JSON.stringify({ name }),
         skipAuthRedirect: true,
       });
+      await reload();
       router.replace("/");
       router.refresh();
     } catch (err) {
@@ -64,7 +67,7 @@ function LoginForm() {
         </div>
         <h1 className="heading-display">欢迎回来</h1>
         <p className="mt-4 text-body text-mid-gray">
-          正式环境用飞书进入。登录后菜单按权限显示：普通员工默认只看发票，合同只对管理员开放。
+          正式环境用飞书进入。登录后菜单按权限显示；管理员可以在「权限管理」里给每个人勾选模块。
         </p>
 
         {error ? (
