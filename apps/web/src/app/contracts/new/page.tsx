@@ -9,6 +9,9 @@ import { FormError, PageHeader } from "@/components/ui";
 import { uploadFiles } from "@/lib/api";
 import type { ImportBatch } from "@/lib/types";
 
+const MAX_FILE_MB = 200;
+const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
+
 function NewContractForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -23,6 +26,11 @@ function NewContractForm() {
     event.preventDefault();
     if (files.length === 0) {
       setError("请先选择 PDF 或 zip");
+      return;
+    }
+    const oversized = files.find((file) => file.size > MAX_FILE_BYTES);
+    if (oversized) {
+      setError(`${oversized.name} 超过 ${MAX_FILE_MB}MB`);
       return;
     }
     setBusy(true);
@@ -60,6 +68,7 @@ function NewContractForm() {
             className="ui-input"
           />
         </label>
+        <p className="text-body text-mid-gray">单个文件不超过 {MAX_FILE_MB}MB。</p>
         {files.length > 0 ? <p className="text-body text-mid-gray">已选 {files.length} 个文件</p> : null}
         <div className="flex flex-wrap gap-3">
           <button type="submit" disabled={busy} className="ui-btn ui-btn-primary">
