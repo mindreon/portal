@@ -1,13 +1,20 @@
 # 浏览器只访问这一个入口，避免前后端跨域、Cookie 丢失。
 # /api/* 交给 FastAPI，其余页面交给 Next.js。
 :80 {
-	encode gzip
+	# SSE 不能走 gzip，也不能在反向代理里攒包，否则进度会卡到超时才一次吐出。
+	handle /api/v1/events* {
+		reverse_proxy api:8000 {
+			flush_interval -1
+		}
+	}
 
 	handle /api* {
+		encode gzip
 		reverse_proxy api:8000
 	}
 
 	handle {
+		encode gzip
 		reverse_proxy web:3000
 	}
 }

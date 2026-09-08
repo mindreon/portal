@@ -10,6 +10,7 @@ import { PinnedTable } from "@/components/pinned-table";
 import { StatusBadge } from "@/components/status-badge";
 import { EmptyHint, Field, FormError, PageHeader } from "@/components/ui";
 import { api, money } from "@/lib/api";
+import { useImportLive } from "@/lib/live";
 import {
   CONTRACT_STATUS_LABEL,
   type Collection,
@@ -58,14 +59,9 @@ export function ContractWorkspace({
   }, [contractId]);
 
   const parsing = contract ? contract.parse_status === "pending" || contract.parse_status === "processing" : false;
-
-  useEffect(() => {
-    if (!parsing) return;
-    const timer = window.setInterval(() => {
-      reload().catch(() => undefined);
-    }, 1500);
-    return () => window.clearInterval(timer);
-  }, [parsing, contractId]);
+  useImportLive(parsing, () => {
+    reload().catch(() => undefined);
+  });
 
   async function saveFields(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -125,7 +121,7 @@ export function ContractWorkspace({
       {contract.parse_status === "pending" || contract.parse_status === "processing" ? (
         <p className="mb-6 flex flex-wrap items-center gap-3 text-body text-mid-gray">
           <StatusBadge kind="parse" value={contract.parse_status} />
-          正在后台识别这份合同，页面会自动更新。刷新不会中断。
+          正在后台识别这份合同，识别完会自动更新。刷新不会中断。
         </p>
       ) : null}
       {contract.parse_status === "failed" ? (
