@@ -107,7 +107,10 @@ export default function InvoicesPage() {
                   <Link href={`/invoices/${row.id}`} className="font-medium hover:underline">
                     {row.title}
                   </Link>
-                  <p className="mt-1 text-[12px] text-mid-gray">{row.invoice_no}</p>
+                  <p className="mt-1 text-[12px] text-mid-gray">
+                    {row.invoice_no.startsWith("UP-") ? "号码待填写" : row.invoice_no}
+                    {row.has_file ? " · 有 PDF" : ""}
+                  </p>
                 </td>
                 <td>{row.counterparty}</td>
                 <td className="ui-money">{money(row.amount, row.currency)}</td>

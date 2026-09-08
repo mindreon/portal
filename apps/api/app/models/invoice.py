@@ -26,6 +26,10 @@ class Invoice(Base):
     notes: Mapped[str | None] = mapped_column(Text)
     contract_id: Mapped[int | None] = mapped_column(ForeignKey("contracts.id"))
     schedule_id: Mapped[int | None] = mapped_column(ForeignKey("payment_schedules.id"))
+    # 人工上传的发票 PDF。没有文件时三列都是空的，兼容以前只填表单的发票。
+    original_name: Mapped[str | None] = mapped_column(String(255))
+    stored_path: Mapped[str | None] = mapped_column(String(512))
+    content_hash: Mapped[str | None] = mapped_column(String(64), unique=True, index=True)
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -35,3 +39,8 @@ class Invoice(Base):
     owner: Mapped["User"] = relationship(back_populates="invoices")  # noqa: F821
     contract: Mapped["Contract | None"] = relationship(back_populates="invoices")  # noqa: F821
     schedule: Mapped["PaymentSchedule | None"] = relationship(back_populates="invoices")  # noqa: F821
+
+    @property
+    def has_file(self) -> bool:
+        """前端用来决定要不要显示预览 / 下载。盘上的路径不对外暴露。"""
+        return bool(self.stored_path)

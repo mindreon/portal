@@ -31,6 +31,20 @@ def ensure_sqlite_columns() -> None:
                 conn.execute(
                     text("ALTER TABLE contracts ADD COLUMN subject_name VARCHAR(255) DEFAULT ''")
                 )
+        if "invoices" in tables:
+            cols = {item["name"] for item in inspector.get_columns("invoices")}
+            if "original_name" not in cols:
+                conn.execute(text("ALTER TABLE invoices ADD COLUMN original_name VARCHAR(255)"))
+            if "stored_path" not in cols:
+                conn.execute(text("ALTER TABLE invoices ADD COLUMN stored_path VARCHAR(512)"))
+            if "content_hash" not in cols:
+                conn.execute(text("ALTER TABLE invoices ADD COLUMN content_hash VARCHAR(64)"))
+            conn.execute(
+                text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS ix_invoices_content_hash "
+                    "ON invoices (content_hash)"
+                )
+            )
         if "users" in tables:
             cols = {item["name"] for item in inspector.get_columns("users")}
             if "modules" not in cols:

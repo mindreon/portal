@@ -67,6 +67,13 @@ export type Invoice = {
   contract_id: number | null;
   schedule_id: number | null;
   owner_id: number;
+  original_name: string | null;
+  has_file: boolean;
+};
+
+export type InvoiceUploadResult = {
+  items: Invoice[];
+  warning_text: string | null;
 };
 
 export type ContractFile = {
