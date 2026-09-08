@@ -8,6 +8,14 @@ export type CurrentUser = {
   modules: string[];
 };
 
+export type ManagedUser = {
+  id: number;
+  name: string;
+  email: string | null;
+  role: string;
+  modules: string[];
+};
+
 export type AuthConfig = {
   feishu_enabled: boolean;
   dev_login_enabled: boolean;

@@ -64,7 +64,7 @@ function LoginForm() {
         </div>
         <h1 className="heading-display">欢迎回来</h1>
         <p className="mt-4 text-body text-mid-gray">
-          正式环境用飞书进入。登录后菜单按权限显示：普通员工默认只看发票，合同只对管理员开放。
+          正式环境用飞书进入。登录后菜单按权限显示；管理员可以在「权限管理」里给每个人勾选模块。
         </p>
 
         {error ? (
