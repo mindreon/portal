@@ -133,6 +133,96 @@ def test_subject_name_and_inferred_our_role(logged_in: TestClient) -> None:
     assert body["subject_name"] == "AI 调度软件"
     assert body["our_role"] == "party_b"
     assert body["counterparty"] == "医大一"
+    assert body["account_kind"] == "receivable"
+
+
+def test_receivable_and_payable_are_summarized_separately(logged_in: TestClient) -> None:
+    sale = logged_in.post(
+        "/api/v1/contracts",
+        json={
+            "title": "销售合同",
+            "contract_no": "HT-AR",
+            "party_a": "医大一",
+            "party_b": "深圳市迈能同行科技有限公司",
+            "amount": "100000",
+            "status": "active",
+        },
+    )
+    buy = logged_in.post(
+        "/api/v1/contracts",
+        json={
+            "title": "采购合同",
+            "contract_no": "HT-AP",
+            "party_a": "深圳市迈能同行科技有限公司",
+            "party_b": "某供应商",
+            "amount": "30000",
+            "status": "active",
+        },
+    )
+    other = logged_in.post(
+        "/api/v1/contracts",
+        json={
+            "title": "无关合同",
+            "contract_no": "HT-OTHER-KIND",
+            "party_a": "甲公司",
+            "party_b": "乙公司",
+            "amount": "9000",
+            "status": "draft",
+        },
+    )
+    assert sale.status_code == 201, sale.text
+    assert sale.json()["account_kind"] == "receivable"
+    assert buy.json()["account_kind"] == "payable"
+    assert other.json()["account_kind"] == ""
+
+    assert (
+        logged_in.post(
+            f"/api/v1/contracts/{sale.json()['id']}/collections",
+            json={"amount": "40000", "received_at": "2026-03-01"},
+        ).status_code
+        == 201
+    )
+    assert (
+        logged_in.post(
+            f"/api/v1/contracts/{buy.json()['id']}/collections",
+            json={"amount": "10000", "received_at": "2026-03-02"},
+        ).status_code
+        == 201
+    )
+
+    summary = logged_in.get("/api/v1/contracts/summary").json()
+    assert summary["receivable_amount"] == "100000.00"
+    assert summary["receivable_collected"] == "40000.00"
+    assert summary["receivable_outstanding"] == "60000.00"
+    assert summary["payable_amount"] == "30000.00"
+    assert summary["payable_paid"] == "10000.00"
+    assert summary["payable_outstanding"] == "20000.00"
+    # 待回款不能把采购合同金额混进来：100000-40000=60000，而不是 139000-50000。
+    assert summary["outstanding_amount"] == "60000.00"
+
+    only_ar = logged_in.get("/api/v1/contracts", params={"account_kind": "receivable"}).json()
+    assert only_ar["total"] == 1
+    assert only_ar["items"][0]["contract_no"] == "HT-AR"
+    only_ap = logged_in.get("/api/v1/contracts", params={"account_kind": "payable"}).json()
+    assert only_ap["total"] == 1
+    assert only_ap["items"][0]["contract_no"] == "HT-AP"
+
+    payments = logged_in.get("/api/v1/contracts/payments").json()
+    assert payments["receivable_count"] == 1
+    assert payments["receivable_amount"] == "40000.00"
+    assert payments["payable_count"] == 1
+    assert payments["payable_amount"] == "10000.00"
+    assert payments["total"] == 2
+    assert {item["account_kind"] for item in payments["items"]} == {"receivable", "payable"}
+
+    only_in = logged_in.get("/api/v1/contracts/payments", params={"kind": "receivable"}).json()
+    assert only_in["total"] == 1
+    assert only_in["items"][0]["account_kind"] == "receivable"
+    assert only_in["receivable_amount"] == "40000.00"
+    assert only_in["payable_amount"] == "10000.00"
+    only_out = logged_in.get("/api/v1/contracts/payments", params={"kind": "payable"}).json()
+    assert only_out["total"] == 1
+    assert only_out["items"][0]["account_kind"] == "payable"
 
 
 def test_contract_list_paginates_and_searches(logged_in: TestClient) -> None:

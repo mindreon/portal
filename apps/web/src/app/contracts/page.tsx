@@ -9,7 +9,13 @@ import { StatusBadge } from "@/components/status-badge";
 import { EmptyHint, PAGE_SIZE, PageHeader, Pager, PartyStack } from "@/components/ui";
 import { api, money, withQuery } from "@/lib/api";
 import { useImportLive } from "@/lib/live";
-import type { Contract, ContractSummary, PageResult } from "@/lib/types";
+import {
+  ACCOUNT_KIND_LABEL,
+  paymentWords,
+  type Contract,
+  type ContractSummary,
+  type PageResult,
+} from "@/lib/types";
 
 function isParsing(status: string) {
   return status === "pending" || status === "processing";
@@ -29,7 +35,8 @@ export default function ContractsPage() {
   const [party, setParty] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [filters, setFilters] = useState({ party: "", dateFrom: "", dateTo: "" });
+  const [accountKind, setAccountKind] = useState("");
+  const [filters, setFilters] = useState({ party: "", dateFrom: "", dateTo: "", accountKind: "" });
   const [page, setPage] = useState(1);
 
   useEffect(() => {
@@ -41,6 +48,7 @@ export default function ContractsPage() {
             party: filters.party,
             date_from: filters.dateFrom,
             date_to: filters.dateTo,
+            account_kind: filters.accountKind,
             page,
             page_size: PAGE_SIZE,
           }),
@@ -70,13 +78,14 @@ export default function ContractsPage() {
   function onFilter(event: React.FormEvent) {
     event.preventDefault();
     setPage(1);
-    setFilters({ party: party.trim(), dateFrom, dateTo });
+    setFilters({ party: party.trim(), dateFrom, dateTo, accountKind });
   }
 
   return (
     <AppShell>
       <PageHeader
         title="合同"
+        description="我方是乙方记应收账款，我方是甲方记应付账款，两边金额分开汇总，不会加在一起。"
         action={
           <Link href="/contracts/new" className="ui-btn ui-btn-primary">
             新建合同
@@ -87,8 +96,10 @@ export default function ContractsPage() {
       <section className="mb-8 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
         <StatBlock label="合同总数" value={String(summary?.count ?? 0)} />
         <StatBlock label="履约中" value={String(summary?.active_count ?? 0)} />
-        <StatBlock label="合同总额" value={money(summary?.total_amount ?? 0)} />
-        <StatBlock label="待回款" value={money(summary?.outstanding_amount ?? 0)} />
+        <StatBlock label="应收账款" value={money(summary?.receivable_amount ?? 0)} />
+        <StatBlock label="待收款" value={money(summary?.receivable_outstanding ?? 0)} />
+        <StatBlock label="应付账款" value={money(summary?.payable_amount ?? 0)} />
+        <StatBlock label="待付款" value={money(summary?.payable_outstanding ?? 0)} />
       </section>
 
       {parsing ? (
@@ -113,6 +124,14 @@ export default function ContractsPage() {
           <span className="mb-2 block font-medium text-ink">结束日期</span>
           <input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} className="ui-input" />
         </label>
+        <label className="text-body">
+          <span className="mb-2 block font-medium text-ink">账款类型</span>
+          <select value={accountKind} onChange={(event) => setAccountKind(event.target.value)} className="ui-input">
+            <option value="">全部</option>
+            <option value="receivable">应收账款（我方是乙方）</option>
+            <option value="payable">应付账款（我方是甲方）</option>
+          </select>
+        </label>
         <div className="flex flex-wrap gap-3">
           <button type="submit" className="ui-btn ui-btn-primary">
             筛选
@@ -124,8 +143,9 @@ export default function ContractsPage() {
               setParty("");
               setDateFrom("");
               setDateTo("");
+              setAccountKind("");
               setPage(1);
-              setFilters({ party: "", dateFrom: "", dateTo: "" });
+              setFilters({ party: "", dateFrom: "", dateTo: "", accountKind: "" });
             }}
           >
             重置
@@ -139,8 +159,9 @@ export default function ContractsPage() {
             <th>文件名</th>
             <th>合同</th>
             <th>甲乙</th>
+            <th>账款</th>
             <th className="ui-money">金额</th>
-            <th className="ui-money">已回款</th>
+            <th className="ui-money">已收/已付</th>
             <th>状态</th>
             <th className="ui-actions">操作</th>
           </tr>
@@ -148,7 +169,7 @@ export default function ContractsPage() {
         <tbody>
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={7}>
+              <td colSpan={8}>
                 <EmptyHint>没有匹配的合同。可以点右上角新建，或放宽筛选。</EmptyHint>
               </td>
             </tr>
@@ -173,6 +194,7 @@ export default function ContractsPage() {
                 <td>
                   <PartyStack a={row.party_a} b={row.party_b || row.counterparty} />
                 </td>
+                <td>{ACCOUNT_KIND_LABEL[row.account_kind] ?? ACCOUNT_KIND_LABEL[""]}</td>
                 <td className="ui-money">{money(row.amount, row.currency)}</td>
                 <td className="ui-money">{money(row.collected_amount, row.currency)}</td>
                 <td>
@@ -191,7 +213,7 @@ export default function ContractsPage() {
                       href={`/contracts/${row.id}?tab=payments`}
                       className="font-medium underline-offset-4 hover:underline"
                     >
-                      回款
+                      {paymentWords(row.account_kind).link}
                     </Link>
                   </div>
                 </td>

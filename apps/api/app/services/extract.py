@@ -532,6 +532,19 @@ def derive_our_role(party_a: str, party_b: str) -> str:
     return ""
 
 
+def derive_account_kind(party_a: str, party_b: str, our_role: str = "") -> str:
+    """
+    我方是乙方（卖东西）→ 应收账款；我方是甲方（买东西）→ 应付账款。
+    两种不能加在一起，所以汇总时必须按这个字段分开算。
+    """
+    role = our_role or derive_our_role(party_a, party_b)
+    if role == "party_b":
+        return "receivable"
+    if role == "party_a":
+        return "payable"
+    return ""
+
+
 def derive_counterparty(party_a: str, party_b: str, our_role: str) -> str:
     """列表上的「对方」：己方是甲则对方是乙，反之亦然。"""
     role = our_role or derive_our_role(party_a, party_b)

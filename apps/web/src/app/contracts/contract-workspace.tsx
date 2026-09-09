@@ -13,7 +13,9 @@ import { EmptyHint, Field, FormError, PageHeader } from "@/components/ui";
 import { api, money, withQuery } from "@/lib/api";
 import { useImportLive } from "@/lib/live";
 import {
+  ACCOUNT_KIND_LABEL,
   CONTRACT_STATUS_LABEL,
+  paymentWords,
   type Collection,
   type Contract,
   type ContractFile,
@@ -107,11 +109,19 @@ export function ContractWorkspace({
     );
   }
 
+  const words = paymentWords(contract.account_kind);
+  const accountHint =
+    contract.account_kind === "receivable"
+      ? "我方是乙方，合同金额记应收账款。"
+      : contract.account_kind === "payable"
+        ? "我方是甲方，合同金额记应付账款。"
+        : "甲乙双方里还没有识别到迈能同行，账款类型暂未判定。";
+
   return (
     <AppShell>
       <PageHeader
         title={contract.title}
-        description={`${contract.source_filename ? `文件 ${contract.source_filename} · ` : ""}编号 ${contract.contract_no || "未编号（内部 ID " + contract.id + "）"} · 合同额 ${money(contract.amount)} · 已开票 ${money(contract.billed_amount)} · 已回款 ${money(contract.collected_amount)}`}
+        description={`${contract.source_filename ? `文件 ${contract.source_filename} · ` : ""}编号 ${contract.contract_no || "未编号（内部 ID " + contract.id + "）"} · ${ACCOUNT_KIND_LABEL[contract.account_kind] ?? ACCOUNT_KIND_LABEL[""]} ${money(contract.amount)} · 已开票 ${money(contract.billed_amount)} · ${words.settled} ${money(contract.collected_amount)}`}
         action={
           tab === "invoices" ? (
             <UploadInvoiceButton
@@ -158,7 +168,7 @@ export function ContractWorkspace({
             ["fields", "要素"],
             ["files", "附件"],
             ["invoices", "发票"],
-            ["payments", "回款"],
+            ["payments", words.tab],
           ] as const
         ).map(([key, label]) => (
           <button
@@ -206,6 +216,7 @@ export function ContractWorkspace({
               />
             </Field>
           </div>
+          <p className="text-body text-mid-gray">{accountHint}</p>
           <Field label="产品 / 服务名称">
             <input
               value={contract.subject_name ?? ""}
@@ -325,6 +336,7 @@ export function ContractWorkspace({
       {tab === "payments" ? (
         <PaymentsPanel
           contractId={contractId}
+          accountKind={contract.account_kind}
           schedules={schedules}
           collections={collections}
           onChanged={reload}
@@ -405,15 +417,18 @@ function ScheduleTableRow({
   item,
   receipts,
   contractId,
+  accountKind,
   onChanged,
   onError,
 }: {
   item: PaymentSchedule;
   receipts: Collection[];
   contractId: number;
+  accountKind: string;
   onChanged: () => Promise<void>;
   onError: (message: string) => void;
 }) {
+  const words = paymentWords(accountKind);
   const [mode, setMode] = useState<"view" | "edit" | "collect">("view");
   const [name, setName] = useState(item.name);
   const [amount, setAmount] = useState(item.amount);
@@ -485,9 +500,7 @@ function ScheduleTableRow({
 
   async function remove() {
     const hasReceipts = receipts.length > 0;
-    const message = hasReceipts
-      ? "该期已有到账。删除会一并去掉到账记录，合同已回款会重新汇总。确定删除？"
-      : "确定删除这一期回款计划？";
+    const message = hasReceipts ? words.deletePlanWithReceipts : words.deletePlan;
     if (!window.confirm(message)) return;
     try {
       for (const receipt of receipts) {
@@ -600,7 +613,7 @@ function ScheduleTableRow({
             <ActionLink danger onClick={remove}>
               删除
             </ActionLink>
-            <ActionLink onClick={startCollect}>登记确收</ActionLink>
+            <ActionLink onClick={startCollect}>{words.confirm}</ActionLink>
           </span>
         )}
       </td>
@@ -611,11 +624,13 @@ function ScheduleTableRow({
 function LooseCollectionRow({
   item,
   contractId,
+  accountKind,
   onChanged,
   onError,
 }: {
   item: Collection;
   contractId: number;
+  accountKind: string;
   onChanged: () => Promise<void>;
   onError: (message: string) => void;
 }) {
@@ -647,7 +662,7 @@ function LooseCollectionRow({
   }
 
   async function remove() {
-    if (!window.confirm("确定删除这笔到账？删除后合同已回款金额会重新计算。")) return;
+    if (!window.confirm(paymentWords(accountKind).deleteReceipt)) return;
     try {
       await api(`/api/v1/contracts/${contractId}/collections/${item.id}`, { method: "DELETE" });
       await onChanged();
@@ -702,15 +717,18 @@ function LooseCollectionRow({
 
 function PaymentsPanel({
   contractId,
+  accountKind,
   schedules,
   collections,
   onChanged,
 }: {
   contractId: number;
+  accountKind: string;
   schedules: PaymentSchedule[];
   collections: Collection[];
   onChanged: () => Promise<void>;
 }) {
+  const words = paymentWords(accountKind);
   const [name, setName] = useState(() => nextPeriodName(schedules.length));
   const [amount, setAmount] = useState("0");
   const [error, setError] = useState("");
@@ -736,16 +754,14 @@ function PaymentsPanel({
   return (
     <div className="space-y-6">
       {error ? <FormError message={error} /> : null}
-      <p className="text-body text-mid-gray">
-        一期一行。改名称或计划金额点编辑；钱到了点登记确收；输错了可以删。一次性会自动生成一期。
-      </p>
+      <p className="text-body text-mid-gray">{words.hint}</p>
       <PinnedTable pinLeft={1} pinRight={1}>
         <thead>
           <tr>
             <th>期次</th>
             <th className="ui-money">计划金额</th>
-            <th className="ui-money">已回款</th>
-            <th>到账日</th>
+            <th className="ui-money">{words.settled}</th>
+            <th>{words.date}</th>
             <th className="ui-actions">操作</th>
           </tr>
         </thead>
@@ -753,7 +769,7 @@ function PaymentsPanel({
           {empty ? (
             <tr>
               <td colSpan={5}>
-                <EmptyHint>还没有回款计划。可以在下方增加一期，或等识别完成后自动生成。</EmptyHint>
+                <EmptyHint>{words.empty}</EmptyHint>
               </td>
             </tr>
           ) : (
@@ -764,6 +780,7 @@ function PaymentsPanel({
                   item={item}
                   receipts={collections.filter((row) => row.schedule_id === item.id)}
                   contractId={contractId}
+                  accountKind={accountKind}
                   onChanged={onChanged}
                   onError={setError}
                 />
@@ -773,6 +790,7 @@ function PaymentsPanel({
                   key={`loose-${item.id}`}
                   item={item}
                   contractId={contractId}
+                  accountKind={accountKind}
                   onChanged={onChanged}
                   onError={setError}
                 />
@@ -798,7 +816,7 @@ function PaymentsPanel({
           />
         </Field>
         <button type="submit" className="ui-btn ui-btn-secondary">
-          增加回款计划
+          {words.addPlan}
         </button>
       </form>
     </div>

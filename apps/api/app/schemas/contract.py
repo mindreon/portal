@@ -38,6 +38,8 @@ class ContractOut(ContractIn):
     owner_id: int
     billed_amount: Decimal = Decimal("0")
     collected_amount: Decimal = Decimal("0")
+    # receivable = 我方是乙方；payable = 我方是甲方。空表示还没判定。
+    account_kind: str = ""
     source_filename: str | None = None
     parse_status: str = "done"
     created_at: datetime | None = None
@@ -97,6 +99,14 @@ class ContractSummary(BaseModel):
     outstanding_amount: Decimal
     # 正在识别的合同份数。列表翻页后当前页可能看不到它们，首页/列表用这个决定要不要开 SSE。
     parsing_count: int = 0
+    # 我方是乙方：合同额记应收账款，已收/待收单独算，不能和应付加在一起。
+    receivable_amount: Decimal = Decimal("0")
+    receivable_collected: Decimal = Decimal("0")
+    receivable_outstanding: Decimal = Decimal("0")
+    # 我方是甲方：合同额记应付账款，已付/待付单独算。
+    payable_amount: Decimal = Decimal("0")
+    payable_paid: Decimal = Decimal("0")
+    payable_outstanding: Decimal = Decimal("0")
 
 
 class CollectionRow(CollectionOut):
@@ -105,6 +115,7 @@ class CollectionRow(CollectionOut):
     party_a: str = ""
     party_b: str = ""
     schedule_name: str | None = None
+    account_kind: str = ""
 
 
 class CollectionPageOut(BaseModel):
@@ -113,3 +124,7 @@ class CollectionPageOut(BaseModel):
     page: int
     page_size: int
     total_amount: Decimal = Decimal("0")
+    receivable_count: int = 0
+    receivable_amount: Decimal = Decimal("0")
+    payable_count: int = 0
+    payable_amount: Decimal = Decimal("0")

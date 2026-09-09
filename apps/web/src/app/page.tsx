@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { Icon, ModuleIconTile, type IconName } from "@/components/icons";
 import { PageHeader } from "@/components/ui";
-import { api } from "@/lib/api";
+import { api, money } from "@/lib/api";
 import { useCurrentUser } from "@/lib/current-user";
 import type { ContractSummary, InvoiceSummary } from "@/lib/types";
 
@@ -52,12 +52,25 @@ export default function HomePage() {
       </section>
 
       {showContracts || showInvoices ? (
-        <section className="mt-8 grid gap-6 sm:grid-cols-3">
+        <section className="mt-8 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
           {showContracts ? (
             <StatCard title="合同总数" value={String(contractSummary?.count ?? 0)} href="/contracts" icon="file-text" />
           ) : null}
           {showContracts ? (
-            <StatCard title="履约中" value={String(contractSummary?.active_count ?? 0)} href="/contracts" icon="file-text" />
+            <StatCard
+              title="应收账款"
+              value={money(contractSummary?.receivable_amount ?? 0)}
+              href="/contracts"
+              icon="file-text"
+            />
+          ) : null}
+          {showContracts ? (
+            <StatCard
+              title="应付账款"
+              value={money(contractSummary?.payable_amount ?? 0)}
+              href="/contracts"
+              icon="file-text"
+            />
           ) : null}
           {showInvoices ? (
             <StatCard title="待收款发票" value={String(invoiceSummary?.issued_count ?? 0)} href="/invoices" icon="receipt" />

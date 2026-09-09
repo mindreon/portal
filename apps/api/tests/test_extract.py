@@ -5,6 +5,7 @@ from app.services.extract import (
     ExtractedFields,
     ExtractedInvoice,
     ExtractedSchedule,
+    derive_account_kind,
     derive_our_role,
     extraction_complete,
     fields_from_llm_payload,
@@ -192,4 +193,6 @@ def test_derive_our_role_from_maineng_name() -> None:
     assert derive_our_role("医大一", "深圳市迈能同行科技有限公司") == "party_b"
     assert derive_our_role("迈能同行科技有限公司", "某医院") == "party_a"
     assert derive_our_role("医大一", "时序天成") == ""
-    assert still_needed_from_payload({"still_needed": ["subject_name"]}) == ["subject_name"]
+    assert derive_account_kind("医大一", "深圳市迈能同行科技有限公司") == "receivable"
+    assert derive_account_kind("深圳市迈能同行科技有限公司", "某医院") == "payable"
+    assert derive_account_kind("医大一", "时序天成") == ""
