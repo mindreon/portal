@@ -3,7 +3,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import Select, func, or_, select
+from sqlalchemy import Select, and_, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy.sql.elements import ColumnElement
@@ -31,7 +31,13 @@ from app.schemas.contract import (
     ScheduleOut,
 )
 from app.schemas.page import PageOut
-from app.services.extract import derive_counterparty, derive_our_role, normalize_contract_no
+from app.services.extract import (
+    OUR_COMPANY_MARKERS,
+    derive_account_kind,
+    derive_counterparty,
+    derive_our_role,
+    normalize_contract_no,
+)
 
 router = APIRouter(
     prefix="/contracts",
@@ -50,7 +56,13 @@ def _to_out(contract: Contract) -> ContractOut:
         Decimal("0"),
     )
     payload = ContractOut.model_validate(contract)
-    return payload.model_copy(update={"billed_amount": billed, "collected_amount": collected})
+    return payload.model_copy(
+        update={
+            "billed_amount": billed,
+            "collected_amount": collected,
+            "account_kind": derive_account_kind(contract.party_a, contract.party_b, contract.our_role),
+        }
+    )
 
 
 def _load(db: Session, contract_id: int) -> Contract | None:
@@ -118,17 +130,81 @@ def _contract_text_filter(text: str | None) -> ColumnElement[bool] | None:
     )
 
 
+def _account_kind_sql(kind: str | None) -> ColumnElement[bool] | None:
+    """
+    应收账款：我方是乙方；应付账款：我方是甲方。
+    已写入 our_role 的合同直接按角色分；老数据角色为空时，再用名称里有没有「迈能同行」兜底。
+    """
+    if kind not in {"receivable", "payable"}:
+        return None
+    marker = OUR_COMPANY_MARKERS[0]
+    empty_role = func.coalesce(Contract.our_role, "") == ""
+    if kind == "receivable":
+        return or_(
+            Contract.our_role == "party_b",
+            and_(
+                empty_role,
+                Contract.party_b.contains(marker),
+                ~Contract.party_a.contains(marker),
+            ),
+        )
+    return or_(
+        Contract.our_role == "party_a",
+        and_(
+            empty_role,
+            Contract.party_a.contains(marker),
+            ~Contract.party_b.contains(marker),
+        ),
+    )
+
+
+def _as_money(value: object) -> Decimal:
+    if value is None:
+        return Decimal("0")
+    if isinstance(value, Decimal):
+        return value
+    return Decimal(str(value))
+
+
+def _outstanding(total: Decimal, settled: Decimal) -> Decimal:
+    return max(Decimal("0"), total - settled)
+
+
+def _sum_contract_amount(db: Session, kind: str) -> Decimal:
+    cond = _account_kind_sql(kind)
+    if cond is None:
+        return Decimal("0")
+    return _as_money(db.scalar(select(func.coalesce(func.sum(Contract.amount), 0)).where(cond)))
+
+
+def _sum_settled_amount(db: Session, kind: str) -> Decimal:
+    cond = _account_kind_sql(kind)
+    if cond is None:
+        return Decimal("0")
+    return _as_money(
+        db.scalar(
+            select(func.coalesce(func.sum(Collection.amount), 0))
+            .join(Contract, Collection.contract_id == Contract.id)
+            .where(cond)
+        )
+    )
+
+
 def _filtered_contracts(
     q: str | None,
     party: str | None,
     date_from: date | None,
     date_to: date | None,
+    account_kind: str | None = None,
 ) -> Select[tuple[Contract]]:
     query = select(Contract)
     for text in (q, party):
         cond = _contract_text_filter(text)
         if cond is not None:
             query = query.where(cond)
+    kind_cond = _account_kind_sql(account_kind)
+    if kind_cond is not None:
+        query = query.where(kind_cond)
     effective = func.coalesce(Contract.signed_at, Contract.start_date)
     if date_from is not None:
         query = query.where(effective >= date_from)
@@ -152,6 +228,9 @@ def _payment_text_filter(text: str | None) -> ColumnElement[bool] | None:
 
 def _collection_row(item: Collection) -> CollectionRow:
     contract = item.contract
+    party_a = contract.party_a if contract else ""
+    party_b = contract.party_b if contract else ""
+    our_role = contract.our_role if contract else ""
     return CollectionRow(
         id=item.id,
         amount=item.amount,
@@ -161,10 +240,30 @@ def _collection_row(item: Collection) -> CollectionRow:
         contract_id=item.contract_id,
         contract_title=contract.title if contract else "",
         contract_no=contract.contract_no if contract else None,
-        party_a=contract.party_a if contract else "",
-        party_b=contract.party_b if contract else "",
+        party_a=party_a,
+        party_b=party_b,
         schedule_name=item.schedule.name if item.schedule else None,
+        account_kind=derive_account_kind(party_a, party_b, our_role),
     )
+
+
+def _collections_stmt(q: str | None, kind: str | None = None) -> Select[tuple[Collection]]:
+    query = select(Collection).join(Contract, Collection.contract_id == Contract.id)
+    cond = _payment_text_filter(q)
+    if cond is not None:
+        query = query.where(cond)
+    kind_cond = _account_kind_sql(kind)
+    if kind_cond is not None:
+        query = query.where(kind_cond)
+    return query
+
+
+def _collection_count(db: Session, stmt: Select[tuple[Collection]]) -> int:
+    return db.scalar(select(func.count()).select_from(stmt.with_only_columns(Collection.id).subquery())) or 0
+
+
+def _collection_sum(db: Session, stmt: Select[tuple[Collection]]) -> Decimal:
+    return _as_money(db.scalar(stmt.with_only_columns(func.coalesce(func.sum(Collection.amount), 0)).order_by(None)))
 
 
 @router.get("", response_model=PageOut[ContractOut])
@@ -173,13 +272,14 @@ def list_contracts(
     party: str | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
+    account_kind: str | None = None,
     page: int = 1,
     page_size: int = 10,
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
 ) -> PageOut[ContractOut]:
     page, page_size, offset = clamp_page(page, page_size)
-    filtered = _filtered_contracts(q, party, date_from, date_to)
+    filtered = _filtered_contracts(q, party, date_from, date_to, account_kind)
     total = db.scalar(select(func.count()).select_from(filtered.subquery())) or 0
     rows = db.scalars(
         filtered.options(
@@ -206,44 +306,53 @@ def contract_summary(
 ) -> ContractSummary:
     count = db.scalar(select(func.count()).select_from(Contract)) or 0
     active_count = db.scalar(select(func.count()).select_from(Contract).where(Contract.status == "active")) or 0
-    total = db.scalar(select(func.coalesce(func.sum(Contract.amount), 0))) or Decimal("0")
-    collected = db.scalar(select(func.coalesce(func.sum(Collection.amount), 0))) or Decimal("0")
+    total = _as_money(db.scalar(select(func.coalesce(func.sum(Contract.amount), 0))))
+    collected = _as_money(db.scalar(select(func.coalesce(func.sum(Collection.amount), 0))))
     parsing_count = db.scalar(
         select(func.count(func.distinct(ContractFile.contract_id))).where(
             ContractFile.contract_id.is_not(None),
             ContractFile.parse_status.in_(("pending", "processing")),
         )
     ) or 0
+    receivable_amount = _sum_contract_amount(db, "receivable")
+    receivable_collected = _sum_settled_amount(db, "receivable")
+    payable_amount = _sum_contract_amount(db, "payable")
+    payable_paid = _sum_settled_amount(db, "payable")
+    receivable_outstanding = _outstanding(receivable_amount, receivable_collected)
+    payable_outstanding = _outstanding(payable_amount, payable_paid)
     return ContractSummary(
         count=count,
         active_count=active_count,
         total_amount=total,
         collected_amount=collected,
-        outstanding_amount=max(Decimal("0"), total - collected),
+        outstanding_amount=receivable_outstanding,
         parsing_count=parsing_count,
+        receivable_amount=receivable_amount,
+        receivable_collected=receivable_collected,
+        receivable_outstanding=receivable_outstanding,
+        payable_amount=payable_amount,
+        payable_paid=payable_paid,
+        payable_outstanding=payable_outstanding,
     )
 
 
 @router.get("/payments", response_model=CollectionPageOut)
 def list_all_payments(
     q: str | None = None,
+    kind: str | None = None,
     page: int = 1,
     page_size: int = 10,
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
 ) -> CollectionPageOut:
     page, page_size, offset = clamp_page(page, page_size)
-    filtered = select(Collection)
-    cond = _payment_text_filter(q)
-    if cond is not None:
-        filtered = filtered.join(Contract, Collection.contract_id == Contract.id).where(cond)
-    total = db.scalar(select(func.count()).select_from(filtered.subquery())) or 0
-    amount_stmt = select(func.coalesce(func.sum(Collection.amount), 0))
-    if cond is not None:
-        amount_stmt = amount_stmt.join(Contract, Collection.contract_id == Contract.id).where(cond)
-    total_amount = db.scalar(amount_stmt) or Decimal("0")
+    listed = _collections_stmt(q, kind)
+    receivable = _collections_stmt(q, "receivable")
+    payable = _collections_stmt(q, "payable")
+    total = _collection_count(db, listed)
+    total_amount = _collection_sum(db, listed)
     rows = db.scalars(
-        filtered.options(selectinload(Collection.contract), selectinload(Collection.schedule))
+        listed.options(selectinload(Collection.contract), selectinload(Collection.schedule))
         .order_by(Collection.received_at.desc(), Collection.id.desc())
         .offset(offset)
         .limit(page_size)
@@ -254,6 +363,10 @@ def list_all_payments(
         page=page,
         page_size=page_size,
         total_amount=total_amount,
+        receivable_count=_collection_count(db, receivable),
+        receivable_amount=_collection_sum(db, receivable),
+        payable_count=_collection_count(db, payable),
+        payable_amount=_collection_sum(db, payable),
     )
 
 

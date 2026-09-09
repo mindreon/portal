@@ -46,6 +46,7 @@ export type Contract = {
   notes: string | null;
   billed_amount: string;
   collected_amount: string;
+  account_kind: string;
   source_filename: string | null;
   parse_status: string;
   owner_id: number;
@@ -122,6 +123,12 @@ export type ContractSummary = {
   collected_amount: string;
   outstanding_amount: string;
   parsing_count: number;
+  receivable_amount: string;
+  receivable_collected: string;
+  receivable_outstanding: string;
+  payable_amount: string;
+  payable_paid: string;
+  payable_outstanding: string;
 };
 
 export type InvoiceSummary = {
@@ -135,10 +142,15 @@ export type CollectionRow = Collection & {
   party_a: string;
   party_b: string;
   schedule_name: string | null;
+  account_kind: string;
 };
 
 export type CollectionPage = PageResult<CollectionRow> & {
   total_amount: string;
+  receivable_count: number;
+  receivable_amount: string;
+  payable_count: number;
+  payable_amount: string;
 };
 
 export const CONTRACT_STATUS_LABEL: Record<string, string> = {
@@ -167,3 +179,65 @@ export const OUR_ROLE_LABEL: Record<string, string> = {
   party_a: "我方是甲方",
   party_b: "我方是乙方",
 };
+
+export const ACCOUNT_KIND_LABEL: Record<string, string> = {
+  receivable: "应收账款",
+  payable: "应付账款",
+  "": "未判定",
+};
+
+/** 我方是乙方收钱，我方是甲方付钱。文案要跟着变，不能一律叫回款。 */
+export function paymentWords(kind: string) {
+  if (kind === "payable") {
+    return {
+      tab: "付款",
+      settled: "已付款",
+      outstanding: "待付款",
+      total: "应付账款",
+      plan: "付款计划",
+      addPlan: "增加付款计划",
+      confirm: "登记付款",
+      date: "付款日",
+      link: "付款",
+      empty: "还没有付款计划。可以在下方增加一期，或等识别完成后自动生成。",
+      hint: "一期一行。改名称或计划金额点编辑；付了点登记付款；输错了可以删。一次性会自动生成一期。",
+      deletePlan: "确定删除这一期付款计划？",
+      deleteReceipt: "确定删除这笔付款？删除后合同已付款金额会重新计算。",
+      deletePlanWithReceipts: "该期已有付款。删除会一并去掉付款记录，合同已付款会重新汇总。确定删除？",
+    };
+  }
+  if (kind === "receivable") {
+    return {
+      tab: "收款",
+      settled: "已收款",
+      outstanding: "待收款",
+      total: "应收账款",
+      plan: "收款计划",
+      addPlan: "增加收款计划",
+      confirm: "登记收款",
+      date: "收款日",
+      link: "收款",
+      empty: "还没有收款计划。可以在下方增加一期，或等识别完成后自动生成。",
+      hint: "一期一行。改名称或计划金额点编辑；钱到了点登记收款；输错了可以删。一次性会自动生成一期。",
+      deletePlan: "确定删除这一期收款计划？",
+      deleteReceipt: "确定删除这笔收款？删除后合同已收款金额会重新计算。",
+      deletePlanWithReceipts: "该期已有收款。删除会一并去掉收款记录，合同已收款会重新汇总。确定删除？",
+    };
+  }
+  return {
+    tab: "收付款",
+    settled: "已结算",
+    outstanding: "待结算",
+    total: "合同额",
+    plan: "收付款计划",
+    addPlan: "增加收付款计划",
+    confirm: "登记收付",
+    date: "收付日",
+    link: "收付款",
+    empty: "还没有收付款计划。可以在下方增加一期，或等识别完成后自动生成。",
+    hint: "一期一行。改名称或计划金额点编辑；钱到了点登记；输错了可以删。一次性会自动生成一期。",
+    deletePlan: "确定删除这一期收付款计划？",
+    deleteReceipt: "确定删除这笔记录？删除后合同已结算金额会重新计算。",
+    deletePlanWithReceipts: "该期已有收付记录。删除会一并去掉记录，合同金额会重新汇总。确定删除？",
+  };
+}
